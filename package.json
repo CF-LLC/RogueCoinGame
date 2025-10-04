@@ -1,0 +1,49 @@
+{
+  "name": "roguecoin",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "export": "next build && next export",
+    "start": "next start",
+    "lint": "next lint",
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:mumbai": "hardhat run scripts/deploy.js --network polygonMumbai",
+    "deploy:polygon": "hardhat run scripts/deploy.js --network polygon"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@tailwindcss/postcss": "^4.1.14",
+    "autoprefixer": "^10.4.21",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "ethers": "^6.13.0",
+    "fs": "0.0.1-security",
+    "lucide-react": "0.544.0",
+    "next": "^15.1.0",
+    "path": "0.12.7",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "3.3.1",
+    "tailwindcss-animate": "1.0.7",
+    "tailwindcss-animated": "^2.0.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^16.3.1",
+    "hardhat": "^2.19.0",
+    "postcss": "8.5.6",
+    "tailwindcss": "4.1.14",
+    "typescript": "^5"
+  }
+}
