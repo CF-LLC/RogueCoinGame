@@ -30,6 +30,7 @@ export default function GamePage() {
   const [minBet, setMinBet] = useState("0")
   const [maxBet, setMaxBet] = useState("0")
   const [winnings, setWinnings] = useState<string | null>(null)
+  const [demoMode, setDemoMode] = useState(false)
   const animationRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -61,12 +62,25 @@ export default function GamePage() {
 
     try {
       const gameContract = new ethers.Contract(CONTRACTS.CRASH_GAME, CRASH_GAME_ABI, signer)
-      const min = await gameContract.minBet()
-      const max = await gameContract.maxBet()
-      setMinBet(ethers.formatEther(min))
-      setMaxBet(ethers.formatEther(max))
+      
+      // Test contract connectivity first
+      try {
+        const min = await gameContract.minBet()
+        const max = await gameContract.maxBet()
+        setMinBet(ethers.formatEther(min))
+        setMaxBet(ethers.formatEther(max))
+      } catch (contractError: any) {
+        console.warn("Contract not accessible:", contractError.message)
+        // Set sensible defaults if contract isn't available
+        setMinBet("0.001")
+        setMaxBet("10")
+        // Don't show error to user for this, just log it
+      }
     } catch (err) {
       console.error("Error loading game data:", err)
+      // Set defaults for UI functionality
+      setMinBet("0.001")
+      setMaxBet("10")
     }
   }
 
@@ -112,6 +126,23 @@ export default function GamePage() {
       return
     }
 
+    // Check if contracts are configured
+    if (!CONTRACTS.CRASH_GAME || !CONTRACTS.RGC_TOKEN) {
+      setError("Game contracts not configured. Switching to demo mode.")
+      setDemoMode(true)
+      // In demo mode, simulate the game without blockchain
+      setLoading(true)
+      setTimeout(() => {
+        setGameState("playing")
+        setCurrentMultiplier(1.0)
+        const simulatedCrash = 1.5 + Math.random() * 8.5
+        setCrashPoint(simulatedCrash)
+        setLoading(false)
+        setError(null)
+      }, 1000)
+      return
+    }
+
     setLoading(true)
     setError(null)
     setTxHash(null)
@@ -123,18 +154,69 @@ export default function GamePage() {
 
       const betAmountWei = ethers.parseEther(betAmount)
 
+      // Check token balance first
+      const balance = await tokenContract.balanceOf(account)
+      if (balance < betAmountWei) {
+        setError("Insufficient RGC balance")
+        return
+      }
+
+      // Check if contracts are valid by testing a simple call
+      try {
+        const [minBetCheck, maxBetCheck, houseEdge] = await Promise.all([
+          gameContract.minBet(),
+          gameContract.maxBet(), 
+          gameContract.houseEdge()
+        ])
+        console.log('Game contract status:', {
+          minBet: ethers.formatEther(minBetCheck),
+          maxBet: ethers.formatEther(maxBetCheck),
+          houseEdge: Number(houseEdge) / 100 + '%'
+        })
+      } catch (contractError) {
+        console.error('Game contract check failed:', contractError)
+        setError("Game contract not available. Please check if contracts are deployed.")
+        return
+      }
+
       // Check allowance
       const allowance = await tokenContract.allowance(account, CONTRACTS.CRASH_GAME)
       if (allowance < betAmountWei) {
-        // Approve tokens
-        const approveTx = await tokenContract.approve(CONTRACTS.CRASH_GAME, betAmountWei)
-        await approveTx.wait()
+        try {
+          // Approve tokens
+          const approveTx = await tokenContract.approve(CONTRACTS.CRASH_GAME, betAmountWei)
+          await approveTx.wait()
+        } catch (approveError: any) {
+          setError("Failed to approve tokens: " + (approveError.message || "Unknown error"))
+          return
+        }
       }
 
       // Generate client seed
       const clientSeed = Math.floor(Math.random() * 1000000)
 
       // Place bet
+      console.log('Placing bet:', {
+        amount: ethers.formatEther(betAmountWei) + ' RGC',
+        clientSeed,
+        balance: ethers.formatEther(balance) + ' RGC',
+        allowance: ethers.formatEther(allowance) + ' RGC'
+      })
+      
+      // Try to estimate gas first to catch errors early
+      try {
+        const gasEstimate = await gameContract.placeBet.estimateGas(betAmountWei, clientSeed)
+        console.log('Gas estimate successful:', gasEstimate.toString())
+      } catch (gasError: any) {
+        console.error('Gas estimation failed:', gasError)
+        if (gasError.message.includes('missing revert data')) {
+          setError('Bet validation failed. Please check: 1) You have enough RGC tokens, 2) Your bet is within limits, 3) The game is not paused')
+        } else {
+          setError('Transaction will fail: ' + (gasError.reason || gasError.message || 'Unknown error'))
+        }
+        return
+      }
+      
       const tx = await gameContract.placeBet(betAmountWei, clientSeed)
       setTxHash(tx.hash)
 
@@ -169,8 +251,18 @@ export default function GamePage() {
       console.error("Bet error:", err)
       if (err.code === "ACTION_REJECTED") {
         setError("Transaction rejected by user")
+      } else if (err.code === "CALL_EXCEPTION") {
+        if (err.message.includes("missing revert data")) {
+          setError("Transaction failed. This may be due to: insufficient RGC balance, insufficient allowance, or the game contract being paused. Please check your RGC balance and try again.")
+        } else {
+          setError("Contract call failed. The game may not be available or contracts not deployed.")
+        }
       } else if (err.message.includes("Insufficient balance")) {
         setError("Insufficient RGC balance")
+      } else if (err.message.includes("User denied")) {
+        setError("Transaction rejected by user")
+      } else if (err.message.includes("missing revert data")) {
+        setError("Transaction failed without specific error. Common causes: insufficient RGC tokens, tokens not approved, or bet amount outside limits.")
       } else {
         setError(err.message || "Failed to place bet")
       }
@@ -181,6 +273,16 @@ export default function GamePage() {
   }
 
   const handleCashOut = async () => {
+    if (demoMode) {
+      // Demo mode - simulate successful cash out
+      const betAmountNum = Number.parseFloat(betAmount) || 1
+      const winningsAmount = betAmountNum * currentMultiplier
+      setWinnings(winningsAmount.toFixed(2))
+      setGameState("won")
+      stopMultiplierAnimation()
+      return
+    }
+
     if (!signer || currentRoundId === null) return
 
     setLoading(true)
@@ -224,11 +326,35 @@ export default function GamePage() {
     setError(null)
     setTxHash(null)
     setWinnings(null)
+    // Keep demo mode state
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
       <ContractStatus />
+      
+      {/* Demo Mode Indicator */}
+      {demoMode && (
+        <div className="mb-6">
+          <Alert className="border-amber-500/50 bg-amber-500/10">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="flex items-center justify-between">
+                <span>🎮 <strong>Demo Mode</strong> - Playing with simulated blockchain interactions</span>
+                <Button 
+                  onClick={() => setDemoMode(false)} 
+                  variant="outline" 
+                  size="sm"
+                  className="ml-2"
+                >
+                  Exit Demo
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+      
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Main Game Area */}
         <div className="lg:col-span-2 space-y-6">
@@ -465,6 +591,19 @@ export default function GamePage() {
                 <li>Click "Cash Out" before the rocket crashes</li>
                 <li>Win your bet × the multiplier!</li>
               </ol>
+              
+              {!demoMode && (
+                <div className="pt-3 border-t">
+                  <Button 
+                    onClick={() => setDemoMode(true)} 
+                    variant="outline" 
+                    size="sm"
+                    className="w-full"
+                  >
+                    🎮 Try Demo Mode
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

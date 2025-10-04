@@ -140,6 +140,8 @@ npm run start        # Start production server
 npm run lint         # Run ESLint
 npm run compile      # Compile smart contracts
 npm run test         # Run contract tests
+npm run check-config # Check contract configuration
+npm run deploy:polygon # Deploy contracts to Polygon mainnet
 ```
 
 ### Smart Contract Development
@@ -151,8 +153,10 @@ npm run compile
 # Run tests
 npm run test
 
-# Deploy to Polygon mainnet (admin only)
+```bash
+# Deploy to Polygon mainnet
 npm run deploy:polygon
+```
 ```
 
 ## 🚀 Deployment

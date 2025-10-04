@@ -2,7 +2,17 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { ethers } from "ethers"
-import { CONTRACTS, CHAIN_NAMES, CHAIN_CURRENCY, SUPPORTED_CHAINS } from "@/lib/contracts"
+import { CONTRACTS } from "@/lib/contracts"
+
+export type WalletType = 'metamask' | 'phantom' | 'walletconnect' | 'coinbase' | 'trust'
+
+export interface DetectedWallet {
+  name: string
+  type: WalletType
+  icon: string
+  installed: boolean
+  provider?: any
+}
 
 interface Web3ContextType {
   provider: ethers.BrowserProvider | null
@@ -11,13 +21,15 @@ interface Web3ContextType {
   chainId: number | null
   isConnecting: boolean
   error: string | null
-  nativeBalance: string // Changed from ethBalance to nativeBalance (ETH/POL)
+  nativeBalance: string
   rgcBalance: string
-  connectWallet: () => Promise<void>
+  connectedWallet: WalletType | null
+  availableWallets: DetectedWallet[]
+  connectWallet: (walletType?: WalletType) => Promise<void>
   disconnectWallet: () => void
+  refreshBalances: () => Promise<void>
   switchNetwork: (chainId: number) => Promise<void>
   addPolygonNetwork: () => Promise<void>
-  refreshBalances: () => Promise<void>
 }
 
 const Web3Context = createContext<Web3ContextType | undefined>(undefined)
@@ -31,60 +43,114 @@ export function Web3Provider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [nativeBalance, setNativeBalance] = useState("0")
   const [rgcBalance, setRgcBalance] = useState("0")
+  const [connectedWallet, setConnectedWallet] = useState<WalletType | null>(null)
+  const [availableWallets, setAvailableWallets] = useState<DetectedWallet[]>([])
 
-  const connectWallet = async () => {
+  // Detect available wallets on component mount
+  useEffect(() => {
+    const detectWallets = () => {
+      const wallets: DetectedWallet[] = [
+        {
+          name: 'MetaMask',
+          type: 'metamask',
+          icon: '🦊',
+          installed: !!(window.ethereum && window.ethereum.isMetaMask),
+          provider: window.ethereum?.isMetaMask ? window.ethereum : undefined
+        },
+        {
+          name: 'Phantom',
+          type: 'phantom',
+          icon: '👻',
+          installed: !!(window.ethereum && window.ethereum.isPhantom),
+          provider: window.ethereum?.isPhantom ? window.ethereum : undefined
+        },
+        {
+          name: 'Coinbase Wallet',
+          type: 'coinbase',
+          icon: '🔵',
+          installed: !!(window.ethereum && window.ethereum.isCoinbaseWallet),
+          provider: window.ethereum?.isCoinbaseWallet ? window.ethereum : undefined
+        },
+        {
+          name: 'Trust Wallet',
+          type: 'trust',
+          icon: '🛡️',
+          installed: !!(window.ethereum && window.ethereum.isTrust),
+          provider: window.ethereum?.isTrust ? window.ethereum : undefined
+        }
+      ]
+      setAvailableWallets(wallets)
+    }
+
+    detectWallets()
+  }, [])
+
+  const connectWallet = async (walletType?: WalletType) => {
     try {
       setIsConnecting(true)
       setError(null)
 
-      console.log("Attempting to connect wallet...")
-
-      // Check if MetaMask is installed
-      if (!window.ethereum) {
-        console.error("MetaMask not detected")
-        throw new Error("MetaMask not installed. Please install MetaMask to connect your wallet.")
+      // If no wallet type specified, try to find the first available one
+      if (!walletType) {
+        const availableWallet = availableWallets.find(w => w.installed)
+        if (!availableWallet) {
+          throw new Error("No compatible wallets detected. Please install MetaMask, Phantom, or another supported wallet.")
+        }
+        walletType = availableWallet.type
       }
 
-      console.log("MetaMask detected, requesting accounts...")
-
-      // Request account access
-      const browserProvider = new ethers.BrowserProvider(window.ethereum)
-      const accounts = await browserProvider.send("eth_requestAccounts", [])
+      let walletProvider: any
       
-      if (!accounts || accounts.length === 0) {
-        throw new Error("No accounts found. Please unlock your MetaMask wallet.")
+      switch (walletType) {
+        case 'metamask':
+          if (!window.ethereum?.isMetaMask) {
+            throw new Error("MetaMask not installed")
+          }
+          walletProvider = window.ethereum
+          break
+          
+        case 'phantom':
+          if (!window.ethereum?.isPhantom) {
+            throw new Error("Phantom wallet not installed or Ethereum mode not enabled")
+          }
+          walletProvider = window.ethereum
+          break
+          
+        case 'coinbase':
+          if (!window.ethereum?.isCoinbaseWallet) {
+            throw new Error("Coinbase Wallet not installed")
+          }
+          walletProvider = window.ethereum
+          break
+          
+        case 'trust':
+          if (!window.ethereum?.isTrust) {
+            throw new Error("Trust Wallet not installed")
+          }
+          walletProvider = window.ethereum
+          break
+          
+        default:
+          if (!window.ethereum) {
+            throw new Error("No Ethereum wallet detected")
+          }
+          walletProvider = window.ethereum
       }
 
-      console.log("Accounts found:", accounts.length)
-
-      // Get network and signer
+      const browserProvider = new ethers.BrowserProvider(walletProvider)
+      const accounts = await browserProvider.send("eth_requestAccounts", [])
       const network = await browserProvider.getNetwork()
       const walletSigner = await browserProvider.getSigner()
-
-      console.log("Connected to network:", network.chainId.toString())
 
       setProvider(browserProvider)
       setSigner(walletSigner)
       setAccount(accounts[0])
       setChainId(Number(network.chainId))
+      setConnectedWallet(walletType)
 
-      // Load balances
       await loadBalances(browserProvider, accounts[0])
-      
-      console.log("Wallet connected successfully!")
     } catch (err: any) {
-      const errorMessage = err.message || "Failed to connect wallet"
-      setError(errorMessage)
-      console.error("Wallet connection error:", err)
-      
-      // More specific error messages
-      if (err.code === 4001) {
-        setError("Connection rejected by user")
-      } else if (err.code === -32002) {
-        setError("Connection request already pending in MetaMask")
-      } else if (errorMessage.includes("eth_requestAccounts")) {
-        setError("Failed to request accounts from MetaMask")
-      }
+      setError(err.message || "Failed to connect wallet")
     } finally {
       setIsConnecting(false)
     }
@@ -95,6 +161,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     setSigner(null)
     setAccount(null)
     setChainId(null)
+    setConnectedWallet(null)
     setNativeBalance("0")
     setRgcBalance("0")
     setError(null)
@@ -102,71 +169,75 @@ export function Web3Provider({ children }: { children: ReactNode }) {
 
   const switchNetwork = async (targetChainId: number) => {
     try {
-      if (!window.ethereum) throw new Error("MetaMask not installed")
+      if (!provider || !window.ethereum) {
+        throw new Error("Wallet not connected")
+      }
 
-      const chainIdHex = `0x${targetChainId.toString(16)}`
-
+      const hexChainId = `0x${targetChainId.toString(16)}`
+      
+      if (!window.ethereum.request) {
+        throw new Error("Wallet does not support network switching")
+      }
+      
       await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: chainIdHex }],
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: hexChainId }],
       })
-      
-      // Clear any previous errors on successful switch
-      setError(null)
+
+      // Update chainId state
+      const network = await provider.getNetwork()
+      setChainId(Number(network.chainId))
     } catch (err: any) {
-      console.error("Network switch error:", err)
-      
       if (err.code === 4902) {
-        // Chain not added to MetaMask
-        setError(`${CHAIN_NAMES[targetChainId]} network not added to MetaMask`)
-      } else if (err.code === 4001) {
-        // User rejected the request
-        setError("User rejected network switch request")
-      } else if (err.message?.includes("not connected")) {
-        // Provider not connected to the requested chain
-        setError(`Wallet not connected to ${CHAIN_NAMES[targetChainId]} network. Please switch manually in your wallet.`)
+        // Chain not added to wallet, try adding it
+        if (targetChainId === 137) {
+          await addPolygonNetwork()
+        } else {
+          throw new Error(`Chain ${targetChainId} not supported. Please add it manually.`)
+        }
       } else {
-        setError(err.message || "Failed to switch network")
+        throw new Error(err.message || "Failed to switch network")
       }
     }
   }
 
   const addPolygonNetwork = async () => {
     try {
-      if (!window.ethereum) throw new Error("MetaMask not installed")
+      if (!window.ethereum) {
+        throw new Error("Wallet not connected")
+      }
 
-      // Add Polygon Mainnet (primary network for production)
+      if (!window.ethereum.request) {
+        throw new Error("Wallet does not support adding networks")
+      }
+      
       await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [
-          {
-            chainId: "0x89", // Polygon Mainnet
-            chainName: "Polygon",
-            nativeCurrency: {
-              name: "POL",
-              symbol: "POL",
-              decimals: 18,
-            },
-            rpcUrls: ["https://polygon-rpc.com", "https://rpc-mainnet.matic.network"],
-            blockExplorerUrls: ["https://polygonscan.com/"],
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: '0x89',
+          chainName: 'Polygon Mainnet',
+          nativeCurrency: {
+            name: 'POL',
+            symbol: 'POL',
+            decimals: 18,
           },
-        ],
+          rpcUrls: ['https://polygon-rpc.com/'],
+          blockExplorerUrls: ['https://polygonscan.com/'],
+        }],
       })
 
-      setError(null)
+      // After adding, switch to it
+      await switchNetwork(137)
     } catch (err: any) {
-      setError(err.message || "Failed to add Polygon network")
-      console.error("Add network error:", err)
+      throw new Error(err.message || "Failed to add Polygon network")
     }
   }
 
   const loadBalances = async (browserProvider: ethers.BrowserProvider, address: string) => {
     try {
-      // Load native balance (ETH/POL)
       const nativeBal = await browserProvider.getBalance(address)
       setNativeBalance(ethers.formatEther(nativeBal))
 
-      // Load RGC balance
       if (CONTRACTS.RGC_TOKEN) {
         const rgcContract = new ethers.Contract(
           CONTRACTS.RGC_TOKEN,
@@ -187,55 +258,6 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Listen for account changes
-  useEffect(() => {
-    if (!window.ethereum) return
-
-    const handleAccountsChanged = (accounts: string[]) => {
-      if (accounts.length === 0) {
-        disconnectWallet()
-      } else if (accounts[0] !== account) {
-        setAccount(accounts[0])
-        if (provider) {
-          loadBalances(provider, accounts[0])
-        }
-      }
-    }
-
-    const handleChainChanged = (chainIdHex: string) => {
-      const newChainId = Number.parseInt(chainIdHex, 16)
-      setChainId(newChainId)
-      // Reload page on chain change (recommended by MetaMask)
-      window.location.reload()
-    }
-
-    window.ethereum.on("accountsChanged", handleAccountsChanged)
-    window.ethereum.on("chainChanged", handleChainChanged)
-
-    return () => {
-      window.ethereum?.removeListener("accountsChanged", handleAccountsChanged)
-      window.ethereum?.removeListener("chainChanged", handleChainChanged)
-    }
-  }, [account, provider])
-
-  // Auto-connect if previously connected
-  useEffect(() => {
-    const autoConnect = async () => {
-      try {
-        // Wait a moment for MetaMask to load
-        await new Promise(resolve => setTimeout(resolve, 100))
-        
-        if (window.ethereum && window.ethereum.selectedAddress) {
-          console.log("Auto-connecting to previously connected wallet...")
-          await connectWallet()
-        }
-      } catch (error) {
-        console.log("Auto-connect failed:", error)
-      }
-    }
-    autoConnect()
-  }, [])
-
   return (
     <Web3Context.Provider
       value={{
@@ -247,11 +269,13 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         error,
         nativeBalance,
         rgcBalance,
+        connectedWallet,
+        availableWallets,
         connectWallet,
         disconnectWallet,
+        refreshBalances,
         switchNetwork,
         addPolygonNetwork,
-        refreshBalances,
       }}
     >
       {children}
@@ -267,9 +291,17 @@ export function useWeb3() {
   return context
 }
 
-// Type declaration for window.ethereum
 declare global {
   interface Window {
-    ethereum?: any
+    ethereum?: {
+      isMetaMask?: boolean
+      isCoinbaseWallet?: boolean
+      isTrust?: boolean
+      isPhantom?: boolean
+      request?: (request: { method: string; params?: any[] }) => Promise<any>
+      send?: (method: string, params?: any[]) => Promise<any>
+      on?: (event: string, handler: (...args: any[]) => void) => void
+      removeListener?: (event: string, handler: (...args: any[]) => void) => void
+    }
   }
 }

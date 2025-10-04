@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, CheckCircle, Wifi, WifiOff } from "lucide-react"
 import { SUPPORTED_CHAINS, CHAIN_NAMES, validateContracts, CONTRACTS } from "@/lib/contracts"
+import WalletSelector from "@/components/wallet-selector"
 
 export default function ContractStatus() {
-  const { chainId, isConnecting, error, connectWallet, switchNetwork, addPolygonNetwork, account } = useWeb3()
+  const { chainId, isConnecting, error, connectWallet, switchNetwork, addPolygonNetwork, account, availableWallets } = useWeb3()
 
   // Check if contracts are configured
   const missingContracts = validateContracts()
@@ -18,18 +19,26 @@ export default function ContractStatus() {
   const isCorrectNetwork = chainId === SUPPORTED_CHAINS.POLYGON_MAINNET
 
   if (!account) {
+    const hasInstalledWallets = availableWallets.some(w => w.installed)
+    
     return (
-      <Alert className="mb-6 border-amber-500/50 bg-amber-500/10">
-        <WifiOff className="h-4 w-4" />
-        <AlertDescription>
-          <div className="flex items-center justify-between">
-            <span>Connect your wallet to access the RogueCoin ecosystem</span>
-            <Button onClick={connectWallet} disabled={isConnecting} size="sm">
-              {isConnecting ? "Connecting..." : "Connect Wallet"}
-            </Button>
-          </div>
-        </AlertDescription>
-      </Alert>
+      <div className="mb-6 space-y-4">
+        <Alert className="border-amber-500/50 bg-amber-500/10">
+          <WifiOff className="h-4 w-4" />
+          <AlertDescription>
+            <div className="flex items-center justify-between">
+              <span>Connect your wallet to access the RogueCoin ecosystem</span>
+              {!hasInstalledWallets && (
+                <Button onClick={() => connectWallet()} disabled={isConnecting} size="sm">
+                  {isConnecting ? "Connecting..." : "Connect Wallet"}
+                </Button>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
+        
+        {hasInstalledWallets && <WalletSelector />}
+      </div>
     )
   }
 

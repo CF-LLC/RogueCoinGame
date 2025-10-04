@@ -8,10 +8,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Gift, CheckCircle2, AlertCircle } from "lucide-react"
 import { ethers } from "ethers"
 import { CONTRACTS, AIRDROP_ABI } from "@/lib/contracts"
+import ContractStatus from "@/components/contract-status"
+import WalletSelector from "@/components/wallet-selector"
+import { GetPOLGuide } from "@/components/get-pol-guide"
 import Image from "next/image"
 
 export default function AirdropPage() {
-  const { account, signer, refreshBalances } = useWeb3()
+  const { account, signer, refreshBalances, nativeBalance } = useWeb3()
   const [loading, setLoading] = useState(false)
   const [hasClaimed, setHasClaimed] = useState(false)
   const [airdropAmount, setAirdropAmount] = useState("0")
@@ -32,6 +35,20 @@ export default function AirdropPage() {
 
   const loadAirdropData = async () => {
     if (!signer || !account) return
+
+    // Check if contracts are configured
+    if (!CONTRACTS.AIRDROP || CONTRACTS.AIRDROP === "") {
+      console.log("Airdrop contract not configured")
+      // Set default values for demo purposes
+      setAirdropAmount("1000")
+      setClaimFee("0.01")
+      setStats({
+        totalClaimed: "0",
+        totalFees: "0",
+        remaining: "1000000",
+      })
+      return
+    }
 
     try {
       const airdropContract = new ethers.Contract(CONTRACTS.AIRDROP, AIRDROP_ABI, signer)
@@ -55,13 +72,29 @@ export default function AirdropPage() {
       })
     } catch (err: any) {
       console.error("Error loading airdrop data:", err)
-      setError("Failed to load airdrop data")
+      setError("Failed to load airdrop data. Contracts may not be deployed yet.")
     }
   }
 
   const handleClaim = async () => {
     if (!signer || !account) {
       setError("Please connect your wallet")
+      return
+    }
+
+    // Check if contracts are configured
+    if (!CONTRACTS.AIRDROP || CONTRACTS.AIRDROP === "") {
+      setError("Airdrop contract not configured. Please deploy contracts first.")
+      return
+    }
+
+    // Check if user has sufficient POL for gas + claim fee
+    const requiredAmount = ethers.parseEther(claimFee)
+    const userBalance = ethers.parseEther(nativeBalance)
+    const estimatedGas = ethers.parseEther("0.001") // Rough gas estimate
+    
+    if (userBalance < requiredAmount + estimatedGas) {
+      setError(`Insufficient POL balance. You need at least ${ethers.formatEther(requiredAmount + estimatedGas)} POL (${claimFee} for claim fee + ~0.001 for gas). Current balance: ${nativeBalance} POL`)
       return
     }
 
@@ -72,7 +105,7 @@ export default function AirdropPage() {
     try {
       const airdropContract = new ethers.Contract(CONTRACTS.AIRDROP, AIRDROP_ABI, signer)
 
-      // Call claimAirdrop with ETH fee
+      // Call claimAirdrop with POL fee
       const tx = await airdropContract.claimAirdrop({
         value: ethers.parseEther(claimFee),
       })
@@ -91,10 +124,18 @@ export default function AirdropPage() {
       console.error("Claim error:", err)
       if (err.code === "ACTION_REJECTED") {
         setError("Transaction rejected by user")
+      } else if (err.code === "INSUFFICIENT_FUNDS") {
+        setError(`Insufficient POL for transaction. You need POL to pay for gas fees and the claim fee (${claimFee} POL). Please add POL to your wallet.`)
+      } else if (err.code === "CALL_EXCEPTION") {
+        setError("Contract call failed. The airdrop contract may not be properly deployed or configured.")
+      } else if (err.message.includes("missing revert data")) {
+        setError("Contract call failed without specific error. Please check if contracts are deployed and you meet all requirements.")
       } else if (err.message.includes("Already claimed")) {
         setError("You have already claimed the airdrop")
       } else if (err.message.includes("Insufficient fee")) {
-        setError("Insufficient ETH for claim fee")
+        setError("Insufficient POL for claim fee")
+      } else if (err.message.includes("insufficient funds")) {
+        setError(`Insufficient POL balance. You need ${claimFee} POL for the claim fee plus additional POL for gas fees.`)
       } else {
         setError(err.message || "Failed to claim airdrop")
       }
@@ -105,19 +146,31 @@ export default function AirdropPage() {
 
   if (!account) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle>Connect Wallet</CardTitle>
-            <CardDescription>Please connect your wallet to claim the RGC airdrop</CardDescription>
-          </CardHeader>
-        </Card>
+      <div className="container mx-auto px-4 py-8">
+        <ContractStatus />
+        <div className="max-w-2xl mx-auto text-center space-y-6">
+          <div className="inline-flex items-center justify-center w-32 h-32 mb-4">
+            <Image
+              src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/My_Coin.png`}
+              alt="RogueCoin"
+              width={128}
+              height={128}
+              className="object-contain"
+            />
+          </div>
+          <h1 className="text-4xl font-bold text-balance">RogueCoin Airdrop</h1>
+          <p className="text-xl text-muted-foreground text-balance">
+            Connect your wallet to claim free RGC tokens
+          </p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-16">
+    <div className="container mx-auto px-4 py-8">
+      <ContractStatus />
+      
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Hero Section */}
         <div className="text-center space-y-4">
@@ -156,8 +209,17 @@ export default function AirdropPage() {
               </div>
               <div className="p-4 rounded-lg bg-muted/50">
                 <p className="text-sm text-muted-foreground mb-1">Claim Fee</p>
-                <p className="text-2xl font-bold text-secondary">{claimFee} ETH</p>
+                <p className="text-2xl font-bold text-secondary">{claimFee} POL</p>
               </div>
+            </div>
+            
+            {/* Balance Info */}
+            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-sm text-muted-foreground mb-1">Your POL Balance</p>
+              <p className="text-lg font-semibold">{Number.parseFloat(nativeBalance).toFixed(4)} POL</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                You need {claimFee} POL for the claim fee + additional POL for gas fees
+              </p>
             </div>
 
             {/* Status Messages */}
@@ -183,12 +245,12 @@ export default function AirdropPage() {
                 <AlertDescription>
                   Transaction submitted!{" "}
                   <a
-                    href={`https://sepolia.etherscan.io/tx/${txHash}`}
+                    href={`https://polygonscan.com/tx/${txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline hover:text-primary"
                   >
-                    View on Etherscan
+                    View on PolygonScan
                   </a>
                 </AlertDescription>
               </Alert>
@@ -219,9 +281,10 @@ export default function AirdropPage() {
               <div className="text-sm text-muted-foreground space-y-2">
                 <p className="font-semibold">How it works:</p>
                 <ol className="list-decimal list-inside space-y-1 ml-2">
+                  <li>Make sure you have enough POL in your wallet</li>
                   <li>Click the claim button above</li>
                   <li>Approve the transaction in your wallet</li>
-                  <li>Pay {claimFee} ETH as a claim fee</li>
+                  <li>Pay {claimFee} POL as a claim fee</li>
                   <li>Receive {airdropAmount} RGC tokens instantly</li>
                   <li>Use your RGC to play the crash game</li>
                 </ol>
@@ -246,7 +309,7 @@ export default function AirdropPage() {
               <CardDescription>Total Fees Collected</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{Number.parseFloat(stats.totalFees).toFixed(4)} ETH</p>
+              <p className="text-2xl font-bold">{Number.parseFloat(stats.totalFees).toFixed(4)} POL</p>
             </CardContent>
           </Card>
 
@@ -271,7 +334,7 @@ export default function AirdropPage() {
               claim once.
             </p>
             <p>
-              The small ETH fee helps prevent abuse and covers gas costs. All fees go to the contract owner to maintain
+              The small POL fee helps prevent abuse and covers gas costs on Polygon network. All fees go to the contract owner to maintain
               the platform.
             </p>
             <p>
@@ -280,6 +343,11 @@ export default function AirdropPage() {
             </p>
           </CardContent>
         </Card>
+
+        {/* POL Guide - Show when user has insufficient balance */}
+        {Number.parseFloat(nativeBalance) < Number.parseFloat(claimFee) + 0.001 && (
+          <GetPOLGuide />
+        )}
       </div>
     </div>
   )
