@@ -106,24 +106,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     try {
       if (!window.ethereum) throw new Error("MetaMask not installed")
 
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [
-          {
-            chainId: "0x13881", // Polygon Mumbai testnet
-            chainName: "Polygon Mumbai",
-            nativeCurrency: {
-              name: "MATIC",
-              symbol: "MATIC",
-              decimals: 18,
-            },
-            rpcUrls: ["https://rpc-mumbai.maticvigil.com"],
-            blockExplorerUrls: ["https://mumbai.polygonscan.com/"],
-          },
-        ],
-      })
-
-      // Also add Polygon Mainnet
+      // Add Polygon Mainnet (primary network for production)
       await window.ethereum.request({
         method: "wallet_addEthereumChain",
         params: [
@@ -135,7 +118,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
               symbol: "MATIC",
               decimals: 18,
             },
-            rpcUrls: ["https://polygon-rpc.com"],
+            rpcUrls: ["https://polygon-rpc.com", "https://rpc-mainnet.matic.network"],
             blockExplorerUrls: ["https://polygonscan.com/"],
           },
         ],
@@ -143,7 +126,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
 
       setError(null)
     } catch (err: any) {
-      setError(err.message || "Failed to add Polygon networks")
+      setError(err.message || "Failed to add Polygon network")
       console.error("Add network error:", err)
     }
   }

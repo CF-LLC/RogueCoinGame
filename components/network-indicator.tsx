@@ -27,7 +27,7 @@ export function NetworkIndicator() {
 
   if (!chainId) return null
 
-  const targetChainId = Number.parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || "80001") // Default to Mumbai
+  const targetChainId = Number.parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || "137") // Default to Polygon Mainnet
   const isCorrectNetwork = chainId === targetChainId
   const networkName = CHAIN_NAMES[chainId] || `Chain ${chainId}`
   const isSupported = Object.values(SUPPORTED_CHAINS).includes(chainId)

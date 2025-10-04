@@ -123,7 +123,7 @@ export default function AirdropPage() {
         <div className="text-center space-y-4">
           <div className="inline-flex items-center justify-center w-32 h-32 mb-4">
             <Image
-              src="/My_Coin.png"
+              src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/My_Coin.png`}
               alt="RogueCoin"
               width={128}
               height={128}
@@ -148,7 +148,7 @@ export default function AirdropPage() {
               <div className="p-4 rounded-lg bg-muted/50">
                 <p className="text-sm text-muted-foreground mb-1">Airdrop Amount</p>
                 <div className="flex items-center gap-2">
-                  <Image src="/My_Coin.png" alt="RGC" width={24} height={24} className="object-contain" />
+                  <Image src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/My_Coin.png`} alt="RGC" width={24} height={24} className="object-contain" />
                   <p className="text-2xl font-bold text-primary">
                     {Number.parseFloat(airdropAmount).toLocaleString()} RGC
                   </p>

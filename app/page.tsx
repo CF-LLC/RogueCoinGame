@@ -238,7 +238,7 @@ export default function GamePage() {
               <div className="relative aspect-video bg-gradient-to-br from-background via-muted/20 to-background rounded-lg overflow-hidden border border-border">
                 <div className="absolute inset-0 flex items-center justify-center opacity-10">
                   <Image
-                    src="/MyCoin.gif"
+                    src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/MyCoin.gif`}
                     alt="RogueCoin"
                     width={300}
                     height={300}
@@ -315,7 +315,7 @@ export default function GamePage() {
                     <p className="text-sm text-muted-foreground mb-1">Your RGC Balance</p>
                     <div className="flex items-center gap-2">
                       <Image
-                        src="/My_Coin.png"
+                        src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/My_Coin.png`}
                         alt="RGC"
                         width={24}
                         height={24}
