@@ -100,7 +100,7 @@ export const CHAIN_NAMES: Record<number, string> = {
 
 export const CHAIN_CURRENCY: Record<number, string> = {
   [SUPPORTED_CHAINS.POLYGON_MUMBAI]: "MATIC",
-  [SUPPORTED_CHAINS.POLYGON_MAINNET]: "MATIC",
+  [SUPPORTED_CHAINS.POLYGON_MAINNET]: "POL",
   [SUPPORTED_CHAINS.LOCALHOST]: "ETH",
 }
 

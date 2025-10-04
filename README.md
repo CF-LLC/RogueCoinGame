@@ -23,7 +23,7 @@ A decentralized crash game built on Polygon blockchain with RogueCoin (RGC) toke
 
 ### 🪂 **Token Airdrop**
 - Claim 1,000 RGC tokens
-- Small MATIC fee (0.001)
+- Small POL fee (0.001)
 - One claim per wallet
 - Funded with 1M RGC
 
@@ -38,7 +38,7 @@ A decentralized crash game built on Polygon blockchain with RogueCoin (RGC) toke
 
 - **Frontend:** Next.js 15, React 19, TypeScript
 - **Styling:** Tailwind CSS, Radix UI
-- **Blockchain:** Polygon (MATIC), Ethers.js v6
+- **Blockchain:** Polygon (POL), Ethers.js v6
 - **Smart Contracts:** Solidity 0.8.20, OpenZeppelin v5
 - **Development:** Hardhat, GitHub Actions
 - **Deployment:** GitHub Pages (Static Export)
@@ -48,7 +48,7 @@ A decentralized crash game built on Polygon blockchain with RogueCoin (RGC) toke
 ### Prerequisites
 - Node.js 18+
 - MetaMask wallet
-- MATIC tokens for gas fees
+- POL tokens for gas fees
 
 ### Installation
 
@@ -104,7 +104,7 @@ Fully responsive design works on:
 - **Chain ID:** 137
 - **RPC URL:** https://polygon-rpc.com
 - **Explorer:** https://polygonscan.com
-- **Currency:** MATIC
+- **Currency:** POL
 
 ### Adding Polygon to MetaMask
 The app will automatically prompt you to add Polygon network.

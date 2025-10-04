@@ -11,7 +11,7 @@ interface Web3ContextType {
   chainId: number | null
   isConnecting: boolean
   error: string | null
-  nativeBalance: string // Changed from ethBalance to nativeBalance (ETH/MATIC)
+  nativeBalance: string // Changed from ethBalance to nativeBalance (ETH/POL)
   rgcBalance: string
   connectWallet: () => Promise<void>
   disconnectWallet: () => void
@@ -143,8 +143,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
             chainId: "0x89", // Polygon Mainnet
             chainName: "Polygon",
             nativeCurrency: {
-              name: "MATIC",
-              symbol: "MATIC",
+              name: "POL",
+              symbol: "POL",
               decimals: 18,
             },
             rpcUrls: ["https://polygon-rpc.com", "https://rpc-mainnet.matic.network"],
@@ -162,7 +162,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
 
   const loadBalances = async (browserProvider: ethers.BrowserProvider, address: string) => {
     try {
-      // Load native balance (ETH/MATIC)
+      // Load native balance (ETH/POL)
       const nativeBal = await browserProvider.getBalance(address)
       setNativeBalance(ethers.formatEther(nativeBal))
 
