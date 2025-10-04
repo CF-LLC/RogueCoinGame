@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title RogueCoinAirdrop
- * @dev Manages RGC token airdrops with ETH fee requirement
+ * @dev Manages RGC token airdrops with POL fee requirement (Polygon native token)
  */
 contract RogueCoinAirdrop is Ownable, ReentrancyGuard, Pausable {
     IERC20 public rgcToken;
@@ -39,7 +39,7 @@ contract RogueCoinAirdrop is Ownable, ReentrancyGuard, Pausable {
     }
     
     /**
-     * @dev Allows users to claim airdrop by paying ETH fee
+     * @dev Allows users to claim airdrop by paying POL fee
      */
     function claimAirdrop() external payable nonReentrant whenNotPaused {
         require(!hasClaimed[msg.sender], "Already claimed");
@@ -79,14 +79,14 @@ contract RogueCoinAirdrop is Ownable, ReentrancyGuard, Pausable {
     }
     
     /**
-     * @dev Withdraw collected ETH fees (owner only)
+     * @dev Withdraw collected POL fees (owner only)
      */
     function withdrawETH() external onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
-        require(balance > 0, "No ETH to withdraw");
+        require(balance > 0, "No POL to withdraw");
         
         (bool success, ) = owner().call{value: balance}("");
-        require(success, "ETH transfer failed");
+        require(success, "POL transfer failed");
         
         emit ETHWithdrawn(owner(), balance);
     }

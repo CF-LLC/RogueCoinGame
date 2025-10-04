@@ -30,7 +30,6 @@ export default function GamePage() {
   const [minBet, setMinBet] = useState("0")
   const [maxBet, setMaxBet] = useState("0")
   const [winnings, setWinnings] = useState<string | null>(null)
-  const [demoMode, setDemoMode] = useState(false)
   const animationRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -128,18 +127,7 @@ export default function GamePage() {
 
     // Check if contracts are configured
     if (!CONTRACTS.CRASH_GAME || !CONTRACTS.RGC_TOKEN) {
-      setError("Game contracts not configured. Switching to demo mode.")
-      setDemoMode(true)
-      // In demo mode, simulate the game without blockchain
-      setLoading(true)
-      setTimeout(() => {
-        setGameState("playing")
-        setCurrentMultiplier(1.0)
-        const simulatedCrash = 1.5 + Math.random() * 8.5
-        setCrashPoint(simulatedCrash)
-        setLoading(false)
-        setError(null)
-      }, 1000)
+      setError("Game contracts not configured. Please check deployment.")
       return
     }
 
@@ -210,9 +198,11 @@ export default function GamePage() {
       } catch (gasError: any) {
         console.error('Gas estimation failed:', gasError)
         if (gasError.message.includes('missing revert data')) {
-          setError('Bet validation failed. Please check: 1) You have enough RGC tokens, 2) Your bet is within limits, 3) The game is not paused')
+          setError('🚫 Bet rejected by contract. Possible causes:\n• Bet amount below minimum (check if min bet is higher than expected)\n• Bet amount above maximum\n• Insufficient RGC balance\n• Game contract paused\n• Network issues')
+        } else if (gasError.reason) {
+          setError('Contract error: ' + gasError.reason)
         } else {
-          setError('Transaction will fail: ' + (gasError.reason || gasError.message || 'Unknown error'))
+          setError('Transaction will fail: ' + (gasError.message || 'Unknown error'))
         }
         return
       }
@@ -273,17 +263,10 @@ export default function GamePage() {
   }
 
   const handleCashOut = async () => {
-    if (demoMode) {
-      // Demo mode - simulate successful cash out
-      const betAmountNum = Number.parseFloat(betAmount) || 1
-      const winningsAmount = betAmountNum * currentMultiplier
-      setWinnings(winningsAmount.toFixed(2))
-      setGameState("won")
-      stopMultiplierAnimation()
+    if (!signer || currentRoundId === null) {
+      setError("No active round to cash out")
       return
     }
-
-    if (!signer || currentRoundId === null) return
 
     setLoading(true)
     setError(null)
@@ -333,46 +316,13 @@ export default function GamePage() {
     <div className="container mx-auto px-4 py-8">
       <ContractStatus />
       
-      {/* Demo Mode Indicator */}
-      {demoMode && (
-        <div className="mb-6">
-          <Alert className="border-amber-500/50 bg-amber-500/10">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <div className="flex items-center justify-between">
-                <span>🎮 <strong>Demo Mode</strong> - Playing with simulated blockchain interactions</span>
-                <Button 
-                  onClick={() => setDemoMode(false)} 
-                  variant="outline" 
-                  size="sm"
-                  className="ml-2"
-                >
-                  Exit Demo
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        </div>
-      )}
-      
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Main Game Area */}
         <div className="lg:col-span-2 space-y-6">
           {/* Game Display */}
-          <Card className="border-primary/20">
-            <CardContent className="p-8">
-              <div className="relative aspect-video bg-gradient-to-br from-background via-muted/20 to-background rounded-lg overflow-hidden border border-border">
-                <div className="absolute inset-0 flex items-center justify-center opacity-10">
-                  <Image
-                    src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/MyCoin.gif`}
-                    alt="RogueCoin"
-                    width={300}
-                    height={300}
-                    className="object-contain"
-                    unoptimized
-                  />
-                </div>
-
+          <Card className="border-primary/20 shadow-2xl">
+            <CardContent className="p-4">
+              <div className="relative aspect-video rounded-lg overflow-hidden border-2 border-purple-500/30">
                 <RocketAnimation
                   multiplier={currentMultiplier}
                   isPlaying={gameState === "playing"}
@@ -380,36 +330,34 @@ export default function GamePage() {
                   hasWon={gameState === "won"}
                 />
 
-                {/* Multiplier Display */}
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-                  <div
-                    className={`text-6xl font-bold font-mono ${
-                      gameState === "crashed"
-                        ? "text-destructive"
-                        : gameState === "won"
-                          ? "text-green-500"
-                          : "text-primary"
-                    }`}
-                  >
-                    {currentMultiplier.toFixed(2)}x
-                  </div>
-                </div>
-
-                {/* Status Messages */}
+                {/* Status Messages Overlay */}
                 {gameState === "crashed" && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-destructive/20 backdrop-blur-sm">
-                    <div className="text-center space-y-2">
-                      <p className="text-4xl font-bold text-destructive">CRASHED!</p>
-                      <p className="text-xl text-muted-foreground">Better luck next time</p>
+                  <div className="absolute inset-0 flex items-center justify-center bg-red-500/10 backdrop-blur-sm">
+                    <div className="text-center space-y-4 animate-pulse">
+                      <div className="text-8xl">💥</div>
+                      <p className="text-5xl font-bold text-red-400 drop-shadow-lg">CRASHED!</p>
+                      <p className="text-2xl text-red-300">At {currentMultiplier.toFixed(2)}x multiplier</p>
+                      <p className="text-lg text-red-200">Better luck next time!</p>
                     </div>
                   </div>
                 )}
 
                 {gameState === "won" && winnings && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-green-500/20 backdrop-blur-sm">
-                    <div className="text-center space-y-2">
-                      <p className="text-4xl font-bold text-green-500">YOU WON!</p>
-                      <p className="text-2xl text-foreground">+{winnings} RGC</p>
+                  <div className="absolute inset-0 flex items-center justify-center bg-green-500/10 backdrop-blur-sm">
+                    <div className="text-center space-y-4 animate-bounce">
+                      <div className="text-8xl">🎉</div>
+                      <p className="text-5xl font-bold text-green-400 drop-shadow-lg">YOU WON!</p>
+                      <p className="text-3xl text-green-300">+{winnings} RGC</p>
+                      <p className="text-xl text-green-200">Cashed out at {currentMultiplier.toFixed(2)}x</p>
+                    </div>
+                  </div>
+                )}
+
+                {loading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+                    <div className="text-center space-y-4">
+                      <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+                      <p className="text-xl text-white">🚀 Preparing launch...</p>
                     </div>
                   </div>
                 )}
@@ -525,16 +473,16 @@ export default function GamePage() {
 
                   {/* Action Buttons */}
                   {gameState === "idle" && (
-                    <Button onClick={handlePlaceBet} disabled={loading} className="w-full h-12 text-lg" size="lg">
+                    <Button onClick={handlePlaceBet} disabled={loading} className="w-full h-12 text-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg transform transition-all duration-200 hover:scale-105" size="lg">
                       {loading ? (
                         <>
                           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Placing Bet...
+                          Launching Rocket...
                         </>
                       ) : (
                         <>
                           <Rocket className="mr-2 h-5 w-5" />
-                          Place Bet
+                          🚀 LAUNCH ROCKET ({betAmount} RGC) 🚀
                         </>
                       )}
                     </Button>
@@ -544,7 +492,7 @@ export default function GamePage() {
                     <Button
                       onClick={handleCashOut}
                       disabled={loading}
-                      className="w-full h-12 text-lg bg-green-600 hover:bg-green-700"
+                      className="w-full h-12 text-lg bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-lg transform transition-all duration-200 hover:scale-105 animate-pulse"
                       size="lg"
                     >
                       {loading ? (
@@ -555,7 +503,7 @@ export default function GamePage() {
                       ) : (
                         <>
                           <TrendingUp className="mr-2 h-5 w-5" />
-                          Cash Out {currentMultiplier.toFixed(2)}x
+                          🚀 CASH OUT {currentMultiplier.toFixed(2)}x 🚀
                         </>
                       )}
                     </Button>
@@ -569,9 +517,10 @@ export default function GamePage() {
 
                   {/* Game Info */}
                   <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
-                    <p>Min Bet: {minBet} RGC</p>
-                    <p>Max Bet: {maxBet} RGC</p>
-                    <p>House Edge: 2%</p>
+                    <p>Min Bet: <span className="text-primary font-semibold">{minBet} RGC</span></p>
+                    <p>Max Bet: <span className="text-primary font-semibold">{maxBet} RGC</span></p>
+                    <p>House Edge: <span className="text-destructive font-semibold">2%</span></p>
+                    <p className="text-xs mt-2 text-white">🎯 Your bet: <span className="font-bold">{betAmount || '0'} RGC</span></p>
                   </div>
                 </>
               )}
@@ -591,19 +540,6 @@ export default function GamePage() {
                 <li>Click "Cash Out" before the rocket crashes</li>
                 <li>Win your bet × the multiplier!</li>
               </ol>
-              
-              {!demoMode && (
-                <div className="pt-3 border-t">
-                  <Button 
-                    onClick={() => setDemoMode(true)} 
-                    variant="outline" 
-                    size="sm"
-                    className="w-full"
-                  >
-                    🎮 Try Demo Mode
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>

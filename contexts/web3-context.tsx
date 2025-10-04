@@ -90,6 +90,9 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       setIsConnecting(true)
       setError(null)
 
+      // Always disconnect first to ensure clean connection
+      disconnectWallet()
+
       // If no wallet type specified, try to find the first available one
       if (!walletType) {
         const availableWallet = availableWallets.find(w => w.installed)
@@ -138,7 +141,14 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       }
 
       const browserProvider = new ethers.BrowserProvider(walletProvider)
+      
+      // Request accounts with explicit wallet selection
       const accounts = await browserProvider.send("eth_requestAccounts", [])
+      
+      if (!accounts || accounts.length === 0) {
+        throw new Error("No accounts found. Please unlock your wallet.")
+      }
+
       const network = await browserProvider.getNetwork()
       const walletSigner = await browserProvider.getSigner()
 
@@ -151,6 +161,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       await loadBalances(browserProvider, accounts[0])
     } catch (err: any) {
       setError(err.message || "Failed to connect wallet")
+      // Clear everything on error
+      disconnectWallet()
     } finally {
       setIsConnecting(false)
     }

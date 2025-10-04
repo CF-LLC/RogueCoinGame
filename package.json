@@ -13,7 +13,8 @@
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
     "deploy:mumbai": "hardhat run scripts/deploy.js --network polygonMumbai",
     "deploy:polygon": "hardhat run scripts/deploy.js --network polygon",
-    "check-config": "node scripts/check-config.js"
+    "check-config": "node scripts/check-config.js",
+    "test-contracts": "node scripts/test-contracts.js"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.0",
