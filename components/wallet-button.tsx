@@ -15,7 +15,7 @@ import { useState } from "react"
 import { CHAIN_CURRENCY } from "@/lib/contracts"
 
 export function WalletButton() {
-  const { account, chainId, isConnecting, connectWallet, disconnectWallet, nativeBalance, rgcBalance, refreshBalances } = useWeb3()
+  const { account, chainId, isConnecting, error, connectWallet, disconnectWallet, nativeBalance, rgcBalance, refreshBalances } = useWeb3()
   const [copied, setCopied] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -37,16 +37,31 @@ export function WalletButton() {
     setTimeout(() => setRefreshing(false), 1000)
   }
 
+  const handleConnectWallet = async () => {
+    try {
+      await connectWallet()
+    } catch (error) {
+      console.error("Connection failed:", error)
+    }
+  }
+
   if (!account) {
     return (
-      <Button
-        onClick={connectWallet}
-        disabled={isConnecting}
-        className="bg-primary text-primary-foreground hover:bg-primary/90"
-      >
-        <Wallet className="mr-2 h-4 w-4" />
-        {isConnecting ? "Connecting..." : "Connect Wallet"}
-      </Button>
+      <div className="space-y-2">
+        <Button
+          onClick={handleConnectWallet}
+          disabled={isConnecting}
+          className="bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          <Wallet className="mr-2 h-4 w-4" />
+          {isConnecting ? "Connecting..." : "Connect Wallet"}
+        </Button>
+        {error && (
+          <div className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md max-w-xs">
+            {error}
+          </div>
+        )}
+      </div>
     )
   }
 

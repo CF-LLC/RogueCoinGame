@@ -37,14 +37,31 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       setIsConnecting(true)
       setError(null)
 
+      console.log("Attempting to connect wallet...")
+
+      // Check if MetaMask is installed
       if (!window.ethereum) {
-        throw new Error("MetaMask not installed")
+        console.error("MetaMask not detected")
+        throw new Error("MetaMask not installed. Please install MetaMask to connect your wallet.")
       }
 
+      console.log("MetaMask detected, requesting accounts...")
+
+      // Request account access
       const browserProvider = new ethers.BrowserProvider(window.ethereum)
       const accounts = await browserProvider.send("eth_requestAccounts", [])
+      
+      if (!accounts || accounts.length === 0) {
+        throw new Error("No accounts found. Please unlock your MetaMask wallet.")
+      }
+
+      console.log("Accounts found:", accounts.length)
+
+      // Get network and signer
       const network = await browserProvider.getNetwork()
       const walletSigner = await browserProvider.getSigner()
+
+      console.log("Connected to network:", network.chainId.toString())
 
       setProvider(browserProvider)
       setSigner(walletSigner)
@@ -53,9 +70,21 @@ export function Web3Provider({ children }: { children: ReactNode }) {
 
       // Load balances
       await loadBalances(browserProvider, accounts[0])
+      
+      console.log("Wallet connected successfully!")
     } catch (err: any) {
-      setError(err.message || "Failed to connect wallet")
+      const errorMessage = err.message || "Failed to connect wallet"
+      setError(errorMessage)
       console.error("Wallet connection error:", err)
+      
+      // More specific error messages
+      if (err.code === 4001) {
+        setError("Connection rejected by user")
+      } else if (err.code === -32002) {
+        setError("Connection request already pending in MetaMask")
+      } else if (errorMessage.includes("eth_requestAccounts")) {
+        setError("Failed to request accounts from MetaMask")
+      }
     } finally {
       setIsConnecting(false)
     }
@@ -192,8 +221,16 @@ export function Web3Provider({ children }: { children: ReactNode }) {
   // Auto-connect if previously connected
   useEffect(() => {
     const autoConnect = async () => {
-      if (window.ethereum && window.ethereum.selectedAddress) {
-        await connectWallet()
+      try {
+        // Wait a moment for MetaMask to load
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        if (window.ethereum && window.ethereum.selectedAddress) {
+          console.log("Auto-connecting to previously connected wallet...")
+          await connectWallet()
+        }
+      } catch (error) {
+        console.log("Auto-connect failed:", error)
       }
     }
     autoConnect()
