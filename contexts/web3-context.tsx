@@ -46,6 +46,31 @@ export function Web3Provider({ children }: { children: ReactNode }) {
   const [connectedWallet, setConnectedWallet] = useState<WalletType | null>(null)
   const [availableWallets, setAvailableWallets] = useState<DetectedWallet[]>([])
 
+  // Auto-reconnect on page load
+  useEffect(() => {
+    const autoReconnect = async () => {
+      const savedWalletType = localStorage.getItem('connectedWallet') as WalletType | null
+      const savedAccount = localStorage.getItem('connectedAccount')
+      
+      if (savedWalletType && savedAccount && window.ethereum) {
+        console.log('Attempting auto-reconnect...', { savedWalletType, savedAccount })
+        try {
+          // Try to reconnect without prompting user
+          await connectWallet(savedWalletType)
+        } catch (error) {
+          console.log('Auto-reconnect failed:', error)
+          // Clear saved data if reconnection fails
+          localStorage.removeItem('connectedWallet')
+          localStorage.removeItem('connectedAccount')
+        }
+      }
+    }
+
+    // Wait a bit for wallet detection to complete
+    const timeoutId = setTimeout(autoReconnect, 1500)
+    return () => clearTimeout(timeoutId)
+  }, []) // Only run on mount
+
   // Detect available wallets on component mount
   useEffect(() => {
     const detectWallets = () => {
@@ -131,7 +156,15 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         })
         
         // Single provider - improved MetaMask detection
-        const isMetaMask = !!(window.ethereum.isMetaMask === true || (window.ethereum as any)._metamask) && !window.ethereum.isPhantom
+        const isMetaMask = !!(
+          window.ethereum.isMetaMask === true || 
+          (window.ethereum as any)._metamask ||
+          // Additional MetaMask checks
+          window.ethereum.constructor?.name === 'MetaMaskInpageProvider' ||
+          (window.ethereum as any).selectedProvider?.isMetaMask ||
+          // Check if MetaMask is the only/primary provider
+          (!window.ethereum.isPhantom && !window.ethereum.isCoinbaseWallet && !window.ethereum.isTrust && window.ethereum.request)
+        ) && !window.ethereum.isPhantom
         const isPhantom = !!(window.ethereum.isPhantom === true || (window.ethereum as any).phantom)
         const isCoinbase = !!(window.ethereum.isCoinbaseWallet === true || (window.ethereum as any).coinbase)
         const isTrust = !!(window.ethereum.isTrust === true || (window.ethereum as any).trust)
@@ -213,22 +246,34 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         provider: undefined // Will be created dynamically
       })
       
-      // FALLBACK: If MetaMask isn't detected but we know it's likely installed
+      // ENHANCED FALLBACK: More aggressive MetaMask detection
       const metamaskWallet = wallets.find(w => w.type === 'metamask')
       if (!metamaskWallet?.installed && window.ethereum) {
-        console.log('=== MetaMask Fallback Detection ===')
-        // Try to detect MetaMask by checking for specific methods or properties
+        console.log('=== Enhanced MetaMask Fallback Detection ===')
+        
+        // Check for various MetaMask indicators
         const hasMetaMaskMethods = window.ethereum.request && typeof window.ethereum.request === 'function'
         const hasMetaMaskInUserAgent = navigator.userAgent.includes('MetaMask')
-        const hasMetaMaskDomain = window.location.hostname.includes('metamask') || document.domain.includes('metamask')
+        const hasMetaMaskGlobal = !!(window as any).MetaMask
+        const hasMetaMaskProvider = window.ethereum.constructor?.name?.includes('MetaMask')
+        const isDefaultProvider = window.ethereum && !window.ethereum.isPhantom && !window.ethereum.isCoinbaseWallet && !window.ethereum.isTrust
         
-        // If we have ethereum object with request method, assume it's MetaMask as fallback
-        if (hasMetaMaskMethods && !wallets.some(w => w.installed && w.type !== 'walletconnect')) {
-          console.log('Fallback MetaMask detection triggered')
+        console.log('MetaMask detection checks:', {
+          hasMetaMaskMethods,
+          hasMetaMaskInUserAgent,
+          hasMetaMaskGlobal,
+          hasMetaMaskProvider,
+          isDefaultProvider,
+          ethereumExists: !!window.ethereum
+        })
+        
+        // If we have ethereum object and it looks like MetaMask, force detection
+        if (hasMetaMaskMethods && (hasMetaMaskInUserAgent || hasMetaMaskGlobal || hasMetaMaskProvider || isDefaultProvider)) {
+          console.log('🦊 Forcing MetaMask detection - it appears to be installed')
           const metamaskIndex = wallets.findIndex(w => w.type === 'metamask')
           if (metamaskIndex !== -1) {
             wallets[metamaskIndex] = {
-              name: 'MetaMask (detected)',
+              name: 'MetaMask',
               type: 'metamask',
               icon: '🦊',
               installed: true,
@@ -248,14 +293,27 @@ export function Web3Provider({ children }: { children: ReactNode }) {
 
     // Add multiple detection attempts to ensure all wallet providers are loaded
     detectWallets() // Run immediately
-    const timeoutId1 = setTimeout(detectWallets, 100) // After 100ms
-    const timeoutId2 = setTimeout(detectWallets, 500) // After 500ms
-    const timeoutId3 = setTimeout(detectWallets, 1000) // After 1s (for slow loading wallets)
+    const timeoutId1 = setTimeout(detectWallets, 50) // After 50ms
+    const timeoutId2 = setTimeout(detectWallets, 200) // After 200ms  
+    const timeoutId3 = setTimeout(detectWallets, 500) // After 500ms
+    const timeoutId4 = setTimeout(detectWallets, 1000) // After 1s (for slow loading wallets)
+    const timeoutId5 = setTimeout(detectWallets, 2000) // After 2s (final attempt)
+    
+    // Listen for ethereum provider injection (MetaMask sometimes loads late)
+    const handleEthereumInjection = () => {
+      console.log('🚀 Ethereum provider injected/changed - re-detecting wallets')
+      detectWallets()
+    }
+    
+    window.addEventListener('ethereum#initialized', handleEthereumInjection)
     
     return () => {
       clearTimeout(timeoutId1)
       clearTimeout(timeoutId2)
       clearTimeout(timeoutId3)
+      clearTimeout(timeoutId4)
+      clearTimeout(timeoutId5)
+      window.removeEventListener('ethereum#initialized', handleEthereumInjection)
     }
   }, [])
 
@@ -389,6 +447,10 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       setChainId(Number(network.chainId))
       setConnectedWallet(walletType)
 
+      // Save connection state for auto-reconnect
+      localStorage.setItem('connectedWallet', walletType)
+      localStorage.setItem('connectedAccount', accounts[0])
+
       await loadBalances(browserProvider, accounts[0])
     } catch (err: any) {
       setError(err.message || "Failed to connect wallet")
@@ -408,6 +470,10 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     setNativeBalance("0")
     setRgcBalance("0")
     setError(null)
+    
+    // Clear saved connection state
+    localStorage.removeItem('connectedWallet')
+    localStorage.removeItem('connectedAccount')
   }
 
   const switchNetwork = async (targetChainId: number) => {

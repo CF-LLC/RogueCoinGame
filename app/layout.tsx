@@ -33,8 +33,10 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}>
       <body suppressHydrationWarning={true}>
         <Web3Provider>
-          <Header />
-          <main className="min-h-screen bg-background">{children}</main>
+          <div className="min-h-screen bg-background">
+            <Header />
+            <main>{children}</main>
+          </div>
         </Web3Provider>
       </body>
     </html>

@@ -11,6 +11,7 @@ import { CONTRACTS, AIRDROP_ABI } from "@/lib/contracts"
 import ContractStatus from "@/components/contract-status"
 import WalletSelector from "@/components/wallet-selector"
 import { GetPOLGuide } from "@/components/get-pol-guide"
+import { WelcomeScreen } from "@/components/welcome-screen"
 import Image from "next/image"
 
 export default function AirdropPage() {
@@ -63,19 +64,32 @@ export default function AirdropPage() {
 
       // Test basic contract calls
       try {
+        console.log('Testing contract calls...')
         const stats = await airdropContract.getStats()
         console.log('Contract stats:', stats)
         
         const airdropAmt = await airdropContract.airdropAmount()
         const fee = await airdropContract.claimFee()
+        console.log('Airdrop amount:', ethers.formatEther(airdropAmt), 'RGC')
+        console.log('Claim fee:', ethers.formatEther(fee), 'POL')
         
         setAirdropAmount(ethers.formatEther(airdropAmt))
         setClaimFee(ethers.formatEther(fee))
         
         if (account) {
+          console.log('Checking if account has claimed:', account)
           const claimed = await airdropContract.hasClaimed(account)
+          console.log('Has claimed:', claimed)
           setHasClaimed(claimed)
         }
+        
+        // Update stats display
+        setStats({
+          totalClaimed: ethers.formatEther(stats[2]),
+          totalFees: ethers.formatEther(stats[3]), 
+          remaining: ethers.formatEther(stats[4])
+        })
+        
       } catch (contractError) {
         console.error("Contract call failed:", contractError)
         setError("Contract calls failed. The contract may not be properly configured.")
@@ -127,7 +141,9 @@ export default function AirdropPage() {
 
       // Check if user already claimed
       try {
+        console.log('Checking claim status for account:', account)
         const alreadyClaimed = await airdropContract.hasClaimed(account)
+        console.log('Already claimed result:', alreadyClaimed)
         if (alreadyClaimed) {
           throw new Error("You have already claimed your airdrop")
         }
@@ -135,14 +151,46 @@ export default function AirdropPage() {
         console.warn("Could not verify claim status:", checkError)
       }
 
+      // Additional debugging checks
+      try {
+        console.log('Performing additional contract checks...')
+        
+        // Check if the contract has the expected stats
+        const debugStats = await airdropContract.getStats()
+        console.log('Contract debug stats:', {
+          totalClaims: debugStats[0].toString(),
+          totalClaimAmount: ethers.formatEther(debugStats[1]),
+          totalClaimed: ethers.formatEther(debugStats[2]),
+          totalFees: ethers.formatEther(debugStats[3]),
+          remaining: ethers.formatEther(debugStats[4])
+        })
+        
+        if (debugStats[4].toString() === "0") {
+          throw new Error("The airdrop has no remaining tokens. All tokens have been distributed.")
+        }
+        
+      } catch (debugError) {
+        console.warn("Debug checks failed (this may be normal):", debugError)
+      }
+
       // Estimate gas first to catch contract errors early
       try {
+        console.log('Estimating gas for claimAirdrop with fee:', claimFee, 'POL')
         const gasEstimate = await airdropContract.claimAirdrop.estimateGas({
           value: ethers.parseEther(claimFee),
         })
         console.log("Gas estimate:", gasEstimate.toString())
       } catch (gasError: any) {
         console.error("Gas estimation failed:", gasError)
+        
+        // More specific error handling
+        if (gasError.code === "CALL_EXCEPTION") {
+          if (gasError.message && gasError.message.includes("missing revert data")) {
+            throw new Error("Contract call failed. This usually means: 1) You've already claimed the airdrop, 2) The airdrop is paused/ended, or 3) You don't meet the claim requirements. Please check the contract status.")
+          }
+          throw new Error("Contract function would fail. The smart contract rejected this transaction. Please check: your claim eligibility, airdrop status, and network connection.")
+        }
+        
         if (gasError.message && gasError.message.includes("missing revert data")) {
           throw new Error("Contract function would fail. This usually means the contract is not properly deployed or configured on this network.")
         }
@@ -189,26 +237,7 @@ export default function AirdropPage() {
   }
 
   if (!account) {
-    return (
-      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 lg:py-8">
-        <ContractStatus />
-        <div className="max-w-2xl mx-auto text-center space-y-4 sm:space-y-6">
-          <div className="inline-flex items-center justify-center w-24 h-24 sm:w-32 sm:h-32 mb-4">
-            <Image
-              src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/My_Coin.png`}
-              alt="RogueCoin"
-              width={96}
-              height={96}
-              className="sm:w-32 sm:h-32 object-contain"
-            />
-          </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-balance">RogueCoin Airdrop</h1>
-          <p className="text-base sm:text-lg lg:text-xl text-muted-foreground text-balance">
-            Connect your wallet to claim free RGC tokens
-          </p>
-        </div>
-      </div>
-    )
+    return <WelcomeScreen />
   }
 
   return (

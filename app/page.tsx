@@ -12,6 +12,7 @@ import { ethers } from "ethers"
 import { CONTRACTS, CRASH_GAME_ABI, RGC_TOKEN_ABI } from "@/lib/contracts"
 import { RocketAnimation } from "@/components/rocket-animation"
 import { GameHistory } from "@/components/game-history"
+import { WelcomeScreen } from "@/components/welcome-screen"
 import ContractStatus from "@/components/contract-status"
 import Image from "next/image"
 
@@ -313,245 +314,253 @@ export default function GamePage() {
   }
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 lg:py-8">
-      <ContractStatus />
+    <>
+      {/* Show Welcome Screen if no wallet connected */}
+      <WelcomeScreen />
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Main Game Area */}
-        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-          {/* Game Display */}
-          <Card className="border-primary/20 shadow-2xl">
-            <CardContent className="p-2 sm:p-4">
-              <div className="relative aspect-video rounded-lg overflow-hidden border-2 border-purple-500/30">
-                <RocketAnimation
-                  multiplier={currentMultiplier}
-                  isPlaying={gameState === "playing"}
-                  hasCrashed={gameState === "crashed"}
-                  hasWon={gameState === "won"}
-                />
-
-                {/* Status Messages Overlay */}
-                {gameState === "crashed" && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-red-500/10 backdrop-blur-sm">
-                    <div className="text-center space-y-2 sm:space-y-4 animate-pulse px-4">
-                      <div className="text-4xl sm:text-6xl lg:text-8xl">💥</div>
-                      <p className="text-2xl sm:text-4xl lg:text-5xl font-bold text-red-400 drop-shadow-lg">CRASHED!</p>
-                      <p className="text-lg sm:text-xl lg:text-2xl text-red-300">At {currentMultiplier.toFixed(2)}x multiplier</p>
-                      <p className="text-sm sm:text-base lg:text-lg text-red-200">Better luck next time!</p>
-                    </div>
-                  </div>
-                )}
-
-                {gameState === "won" && winnings && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-green-500/10 backdrop-blur-sm">
-                    <div className="text-center space-y-2 sm:space-y-4 animate-bounce px-4">
-                      <div className="text-4xl sm:text-6xl lg:text-8xl">🎉</div>
-                      <p className="text-2xl sm:text-4xl lg:text-5xl font-bold text-green-400 drop-shadow-lg">YOU WON!</p>
-                      <p className="text-xl sm:text-2xl lg:text-3xl text-green-300">+{winnings} RGC</p>
-                      <p className="text-sm sm:text-lg lg:text-xl text-green-200">Cashed out at {currentMultiplier.toFixed(2)}x</p>
-                    </div>
-                  </div>
-                )}
-
-                {loading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-                    <div className="text-center space-y-2 sm:space-y-4 px-4">
-                      <Loader2 className="h-8 w-8 sm:h-12 sm:w-12 animate-spin text-primary mx-auto" />
-                      <p className="text-sm sm:text-lg lg:text-xl text-white">🚀 Preparing launch...</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Game History */}
-          <GameHistory />
-        </div>
-
-        {/* Betting Panel */}
-        <div className="space-y-4 sm:space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Place Your Bet</CardTitle>
-              <CardDescription>Bet RGC and cash out before the crash</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!account ? (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>Connect your wallet to play</AlertDescription>
-                </Alert>
-              ) : (
-                <>
-                  {/* Balance Display */}
-                  <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-1">Your RGC Balance</p>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <Image
-                        src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/My_Coin.png`}
-                        alt="RGC"
-                        width={20}
-                        height={20}
-                        className="sm:w-6 sm:h-6 object-contain"
-                      />
-                      <p className="text-lg sm:text-xl lg:text-2xl font-bold">{Number.parseFloat(rgcBalance).toFixed(2)} RGC</p>
-                    </div>
-                  </div>
-
-                  {/* Bet Amount Input */}
-                  <div className="space-y-2">
-                    <Label htmlFor="betAmount">Bet Amount (RGC)</Label>
-                    <Input
-                      id="betAmount"
-                      type="number"
-                      placeholder={`Min: ${minBet}, Max: ${maxBet}`}
-                      value={betAmount}
-                      onChange={(e) => setBetAmount(e.target.value)}
-                      disabled={gameState !== "idle" || loading}
-                      className="text-lg"
+      {/* Show Game only if wallet is connected */}
+      {account && (
+        <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 lg:py-8">
+          <ContractStatus />
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            {/* Main Game Area */}
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+              {/* Game Display */}
+              <Card className="border-primary/20 shadow-2xl">
+                <CardContent className="p-2 sm:p-4">
+                  <div className="relative aspect-video rounded-lg overflow-hidden border-2 border-purple-500/30">
+                    <RocketAnimation
+                      multiplier={currentMultiplier}
+                      isPlaying={gameState === "playing"}
+                      hasCrashed={gameState === "crashed"}
+                      hasWon={gameState === "won"}
                     />
-                    <div className="grid grid-cols-4 gap-1 sm:gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setBetAmount((Number.parseFloat(rgcBalance) * 0.25).toFixed(2))}
-                        disabled={gameState !== "idle"}
-                        className="text-xs sm:text-sm px-1 sm:px-3"
-                      >
-                        25%
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setBetAmount((Number.parseFloat(rgcBalance) * 0.5).toFixed(2))}
-                        disabled={gameState !== "idle"}
-                        className="text-xs sm:text-sm px-1 sm:px-3"
-                      >
-                        50%
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setBetAmount((Number.parseFloat(rgcBalance) * 0.75).toFixed(2))}
-                        disabled={gameState !== "idle"}
-                        className="text-xs sm:text-sm px-1 sm:px-3"
-                      >
-                        75%
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setBetAmount(rgcBalance)}
-                        disabled={gameState !== "idle"}
-                        className="text-xs sm:text-sm px-1 sm:px-3"
-                      >
-                        Max
-                      </Button>
-                    </div>
-                  </div>
 
-                  {/* Error Display */}
-                  {error && (
-                    <Alert variant="destructive">
+                    {/* Status Messages Overlay */}
+                    {gameState === "crashed" && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-red-500/10 backdrop-blur-sm">
+                        <div className="text-center space-y-2 sm:space-y-4 animate-pulse px-4">
+                          <div className="text-4xl sm:text-6xl lg:text-8xl">💥</div>
+                          <p className="text-2xl sm:text-4xl lg:text-5xl font-bold text-red-400 drop-shadow-lg">CRASHED!</p>
+                          <p className="text-lg sm:text-xl lg:text-2xl text-red-300">At {currentMultiplier.toFixed(2)}x multiplier</p>
+                          <p className="text-sm sm:text-base lg:text-lg text-red-200">Better luck next time!</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {gameState === "won" && winnings && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-green-500/10 backdrop-blur-sm">
+                        <div className="text-center space-y-2 sm:space-y-4 animate-bounce px-4">
+                          <div className="text-4xl sm:text-6xl lg:text-8xl">🎉</div>
+                          <p className="text-2xl sm:text-4xl lg:text-5xl font-bold text-green-400 drop-shadow-lg">YOU WON!</p>
+                          <p className="text-xl sm:text-2xl lg:text-3xl text-green-300">+{winnings} RGC</p>
+                          <p className="text-sm sm:text-lg lg:text-xl text-green-200">Cashed out at {currentMultiplier.toFixed(2)}x</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {loading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+                        <div className="text-center space-y-2 sm:space-y-4 px-4">
+                          <Loader2 className="h-8 w-8 sm:h-12 sm:w-12 animate-spin text-primary mx-auto" />
+                          <p className="text-sm sm:text-lg lg:text-xl text-white">🚀 Preparing launch...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Game History */}
+              <GameHistory />
+            </div>
+
+            {/* Betting Panel */}
+            <div className="space-y-4 sm:space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Place Your Bet</CardTitle>
+                  <CardDescription>Bet RGC and cash out before the crash</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {!account ? (
+                    <Alert>
                       <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{error}</AlertDescription>
+                      <AlertDescription>Connect your wallet to play</AlertDescription>
                     </Alert>
-                  )}
+                  ) : (
+                    <>
+                      {/* Balance Display */}
+                      <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-1">Your RGC Balance</p>
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <Image
+                            src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/My_Coin.png`}
+                            alt="RGC"
+                            width={20}
+                            height={20}
+                            className="sm:w-6 sm:h-6 object-contain"
+                          />
+                          <p className="text-lg sm:text-xl lg:text-2xl font-bold">{Number.parseFloat(rgcBalance).toFixed(2)} RGC</p>
+                        </div>
+                      </div>
 
-                  {/* Transaction Hash */}
-                  {txHash && (
-                    <Alert className="border-primary/50 bg-primary/10">
-                      <AlertDescription className="text-sm">
-                        <a
-                          href={`https://polygonscan.com/tx/${txHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline hover:text-primary"
+                      {/* Bet Amount Input */}
+                      <div className="space-y-2">
+                        <Label htmlFor="betAmount">Bet Amount (RGC)</Label>
+                        <Input
+                          id="betAmount"
+                          type="number"
+                          placeholder={`Min: ${minBet}, Max: ${maxBet}`}
+                          value={betAmount}
+                          onChange={(e) => setBetAmount(e.target.value)}
+                          disabled={gameState !== "idle" || loading}
+                          className="text-lg"
+                        />
+                        <div className="grid grid-cols-4 gap-1 sm:gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setBetAmount((Number.parseFloat(rgcBalance) * 0.25).toFixed(2))}
+                            disabled={gameState !== "idle"}
+                            className="text-xs sm:text-sm px-1 sm:px-3"
+                          >
+                            25%
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setBetAmount((Number.parseFloat(rgcBalance) * 0.5).toFixed(2))}
+                            disabled={gameState !== "idle"}
+                            className="text-xs sm:text-sm px-1 sm:px-3"
+                          >
+                            50%
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setBetAmount((Number.parseFloat(rgcBalance) * 0.75).toFixed(2))}
+                            disabled={gameState !== "idle"}
+                            className="text-xs sm:text-sm px-1 sm:px-3"
+                          >
+                            75%
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setBetAmount(rgcBalance)}
+                            disabled={gameState !== "idle"}
+                            className="text-xs sm:text-sm px-1 sm:px-3"
+                          >
+                            Max
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Error Display */}
+                      {error && (
+                        <Alert variant="destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* Transaction Hash */}
+                      {txHash && (
+                        <Alert className="border-primary/50 bg-primary/10">
+                          <AlertDescription className="text-sm">
+                            <a
+                              href={`https://polygonscan.com/tx/${txHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline hover:text-primary"
+                            >
+                              View transaction
+                            </a>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* Action Buttons */}
+                      {gameState === "idle" && (
+                        <Button onClick={handlePlaceBet} disabled={loading} className="w-full h-10 sm:h-12 text-sm sm:text-base lg:text-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg transform transition-all duration-200 hover:scale-105" size="lg">
+                          {loading ? (
+                            <>
+                              <Loader2 className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                              <span className="hidden sm:inline">Launching Rocket...</span>
+                              <span className="sm:hidden">Launching...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Rocket className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                              <span className="hidden sm:inline">🚀 LAUNCH ROCKET ({betAmount} RGC) 🚀</span>
+                              <span className="sm:hidden">🚀 LAUNCH ({betAmount}) 🚀</span>
+                            </>
+                          )}
+                        </Button>
+                      )}
+
+                      {gameState === "playing" && (
+                        <Button
+                          onClick={handleCashOut}
+                          disabled={loading}
+                          className="w-full h-10 sm:h-12 text-sm sm:text-base lg:text-lg bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-lg transform transition-all duration-200 hover:scale-105 animate-pulse"
+                          size="lg"
                         >
-                          View transaction
-                        </a>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  {/* Action Buttons */}
-                  {gameState === "idle" && (
-                    <Button onClick={handlePlaceBet} disabled={loading} className="w-full h-10 sm:h-12 text-sm sm:text-base lg:text-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg transform transition-all duration-200 hover:scale-105" size="lg">
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                          <span className="hidden sm:inline">Launching Rocket...</span>
-                          <span className="sm:hidden">Launching...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Rocket className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                          <span className="hidden sm:inline">🚀 LAUNCH ROCKET ({betAmount} RGC) 🚀</span>
-                          <span className="sm:hidden">🚀 LAUNCH ({betAmount}) 🚀</span>
-                        </>
+                          {loading ? (
+                            <>
+                              <Loader2 className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                              <span className="hidden sm:inline">Cashing Out...</span>
+                              <span className="sm:hidden">Cashing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <TrendingUp className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                              <span className="hidden sm:inline">🚀 CASH OUT {currentMultiplier.toFixed(2)}x 🚀</span>
+                              <span className="sm:hidden">🚀 CASH OUT {currentMultiplier.toFixed(2)}x</span>
+                            </>
+                          )}
+                        </Button>
                       )}
-                    </Button>
-                  )}
 
-                  {gameState === "playing" && (
-                    <Button
-                      onClick={handleCashOut}
-                      disabled={loading}
-                      className="w-full h-10 sm:h-12 text-sm sm:text-base lg:text-lg bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-lg transform transition-all duration-200 hover:scale-105 animate-pulse"
-                      size="lg"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                          <span className="hidden sm:inline">Cashing Out...</span>
-                          <span className="sm:hidden">Cashing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <TrendingUp className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                          <span className="hidden sm:inline">🚀 CASH OUT {currentMultiplier.toFixed(2)}x 🚀</span>
-                          <span className="sm:hidden">🚀 CASH OUT {currentMultiplier.toFixed(2)}x</span>
-                        </>
+                      {(gameState === "crashed" || gameState === "won") && (
+                        <Button onClick={handlePlayAgain} className="w-full h-10 sm:h-12 text-sm sm:text-base lg:text-lg" size="lg">
+                          Play Again
+                        </Button>
                       )}
-                    </Button>
+
+                      {/* Game Info */}
+                      <div className="text-xs sm:text-sm text-muted-foreground space-y-1 pt-2 border-t">
+                        <p>Min Bet: <span className="text-primary font-semibold">{minBet} RGC</span></p>
+                        <p>Max Bet: <span className="text-primary font-semibold">{maxBet} RGC</span></p>
+                        <p>House Edge: <span className="text-destructive font-semibold">2%</span></p>
+                        <p className="text-xs sm:text-sm mt-2 text-white">🎯 Your bet: <span className="font-bold">{betAmount || '0'} RGC</span></p>
+                      </div>
+                    </>
                   )}
+                </CardContent>
+              </Card>
 
-                  {(gameState === "crashed" || gameState === "won") && (
-                    <Button onClick={handlePlayAgain} className="w-full h-10 sm:h-12 text-sm sm:text-base lg:text-lg" size="lg">
-                      Play Again
-                    </Button>
-                  )}
-
-                  {/* Game Info */}
-                  <div className="text-xs sm:text-sm text-muted-foreground space-y-1 pt-2 border-t">
-                    <p>Min Bet: <span className="text-primary font-semibold">{minBet} RGC</span></p>
-                    <p>Max Bet: <span className="text-primary font-semibold">{maxBet} RGC</span></p>
-                    <p>House Edge: <span className="text-destructive font-semibold">2%</span></p>
-                    <p className="text-xs sm:text-sm mt-2 text-white">🎯 Your bet: <span className="font-bold">{betAmount || '0'} RGC</span></p>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* How to Play */}
-          <Card className="bg-muted/30">
-            <CardHeader>
-              <CardTitle className="text-base sm:text-lg">How to Play</CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs sm:text-sm text-muted-foreground space-y-2">
-              <ol className="list-decimal list-inside space-y-1">
-                <li>Enter your bet amount in RGC</li>
-                <li>Click "Place Bet" and approve the transaction</li>
-                <li>Watch the multiplier rise</li>
-                <li>Click "Cash Out" before the rocket crashes</li>
-                <li>Win your bet × the multiplier!</li>
-              </ol>
-            </CardContent>
-          </Card>
+              {/* How to Play */}
+              <Card className="bg-muted/30">
+                <CardHeader>
+                  <CardTitle className="text-base sm:text-lg">How to Play</CardTitle>
+                </CardHeader>
+                <CardContent className="text-xs sm:text-sm text-muted-foreground space-y-2">
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Enter your bet amount in RGC</li>
+                    <li>Click "Place Bet" and approve the transaction</li>
+                    <li>Watch the multiplier rise</li>
+                    <li>Click "Cash Out" before the rocket crashes</li>
+                    <li>Win your bet × the multiplier!</li>
+                  </ol>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   )
 }

@@ -64,9 +64,9 @@ export const CRASH_GAME_ABI = [
 ]
 
 export const CONTRACTS = {
-  RGC_TOKEN: process.env.NEXT_PUBLIC_RGC_TOKEN_ADDRESS || "",
-  AIRDROP: process.env.NEXT_PUBLIC_AIRDROP_ADDRESS || "",
-  CRASH_GAME: process.env.NEXT_PUBLIC_CRASH_GAME_ADDRESS || "",
+  RGC_TOKEN: process.env.NEXT_PUBLIC_RGC_TOKEN_ADDRESS || "0x0708a9DD95F191711221D5D0BC8B12B2C5b7bC5e",
+  AIRDROP: process.env.NEXT_PUBLIC_AIRDROP_ADDRESS || "0xd2D45bdf0e4C8393E9BC57bAd363b01Eaeb377f9",
+  CRASH_GAME: process.env.NEXT_PUBLIC_CRASH_GAME_ADDRESS || "0xf8f6F8f1c656DbD0540C26B3Bfa1969B500AdB5c",
 }
 
 // Validation function to check if contracts are properly configured

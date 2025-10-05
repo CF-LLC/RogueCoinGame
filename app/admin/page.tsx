@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, AlertCircle, CheckCircle2, Settings, DollarSign, TrendingUp } from "lucide-react"
 import { ethers } from "ethers"
 import { CONTRACTS, AIRDROP_ABI, CRASH_GAME_ABI, ADMIN_WALLET } from "@/lib/contracts"
+import { WelcomeScreen } from "@/components/welcome-screen"
 
 export default function AdminPage() {
   const { account, signer } = useWeb3()
@@ -145,10 +146,10 @@ export default function AdminPage() {
       const tx = await airdropContract.withdrawETH()
       await tx.wait()
 
-      setSuccess("ETH withdrawn successfully")
+      setSuccess("POL withdrawn successfully")
       await loadStats()
     } catch (err: any) {
-      setError(err.message || "Failed to withdraw ETH")
+      setError(err.message || "Failed to withdraw POL")
     } finally {
       setLoading(false)
     }
@@ -200,16 +201,7 @@ export default function AdminPage() {
   }
 
   if (!account) {
-    return (
-      <div className="container mx-auto px-4 py-16">
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle>Admin Dashboard</CardTitle>
-            <CardDescription>Connect your wallet to access admin functions</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
+    return <WelcomeScreen />
   }
 
   if (!isAdmin) {
@@ -307,7 +299,7 @@ export default function AdminPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Fees Collected</span>
-                    <span className="font-mono font-semibold">{airdropStats.totalFees} ETH</span>
+                    <span className="font-mono font-semibold">{airdropStats.totalFees} POL</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Remaining Supply</span>
@@ -375,7 +367,7 @@ export default function AdminPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Claim Fee</span>
-                    <span className="font-mono font-semibold">{airdropStats.claimFee} ETH</span>
+                    <span className="font-mono font-semibold">{airdropStats.claimFee} POL</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Remaining Supply</span>
@@ -422,11 +414,11 @@ export default function AdminPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Update Claim Fee</CardTitle>
-                  <CardDescription>Set the ETH fee required to claim</CardDescription>
+                  <CardDescription>Set the POL fee required to claim</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="newClaimFee">New Fee (ETH)</Label>
+                    <Label htmlFor="newClaimFee">New Fee (POL)</Label>
                     <Input
                       id="newClaimFee"
                       type="number"
@@ -447,16 +439,16 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
-              {/* Withdraw ETH */}
+              {/* Withdraw POL */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Withdraw ETH Fees</CardTitle>
+                  <CardTitle>Withdraw POL Fees</CardTitle>
                   <CardDescription>Withdraw collected claim fees</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="p-3 rounded-lg bg-muted/50">
                     <p className="text-sm text-muted-foreground mb-1">Available to Withdraw</p>
-                    <p className="text-2xl font-bold">{airdropStats.totalFees} ETH</p>
+                    <p className="text-2xl font-bold">{airdropStats.totalFees} POL</p>
                   </div>
                   <Button
                     onClick={handleWithdrawETH}
@@ -469,7 +461,7 @@ export default function AdminPage() {
                     ) : (
                       <DollarSign className="mr-2 h-4 w-4" />
                     )}
-                    Withdraw All ETH
+                    Withdraw All POL
                   </Button>
                 </CardContent>
               </Card>
