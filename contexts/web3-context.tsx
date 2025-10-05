@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { ethers } from "ethers"
-import { CONTRACTS } from "@/lib/contracts"
+import { CONTRACTS, RGC_TOKEN_ABI } from "@/lib/contracts"
 
 export type WalletType = 'metamask' | 'phantom' | 'walletconnect' | 'coinbase' | 'trust'
 
@@ -49,40 +49,214 @@ export function Web3Provider({ children }: { children: ReactNode }) {
   // Detect available wallets on component mount
   useEffect(() => {
     const detectWallets = () => {
-      const wallets: DetectedWallet[] = [
-        {
+      const wallets: DetectedWallet[] = []
+      
+      console.log('=== Wallet Detection Debug ===')
+      console.log('window.ethereum exists:', !!window.ethereum)
+      console.log('window.ethereum object:', window.ethereum)
+      console.log('window.ethereum.isMetaMask:', window.ethereum?.isMetaMask)
+      console.log('window.ethereum.isPhantom:', window.ethereum?.isPhantom)
+      console.log('window.ethereum.providers:', (window.ethereum as any)?.providers)
+      
+      // Check if we have multiple providers
+      if ((window.ethereum as any)?.providers) {
+        const providers = (window.ethereum as any).providers
+        console.log('=== Multiple Providers Detected ===')
+        providers.forEach((p: any, index: number) => {
+          console.log(`Provider ${index}:`, {
+            isMetaMask: p.isMetaMask,
+            isPhantom: p.isPhantom,
+            isCoinbaseWallet: p.isCoinbaseWallet,
+            isTrust: p.isTrust,
+            _metamask: p._metamask,
+            phantom: p.phantom,
+            provider: p
+          })
+        })
+        
+        // MetaMask - more thorough detection
+        const metamaskProvider = providers.find((p: any) => {
+          const isMetaMaskProvider = (p.isMetaMask === true || p._metamask) && !p.isPhantom
+          console.log('Checking provider for MetaMask:', { isMetaMask: p.isMetaMask, _metamask: p._metamask, isPhantom: p.isPhantom, result: isMetaMaskProvider })
+          return isMetaMaskProvider
+        })
+        console.log('Found MetaMask provider:', !!metamaskProvider)
+        
+        wallets.push({
           name: 'MetaMask',
           type: 'metamask',
           icon: '🦊',
-          installed: !!(window.ethereum && window.ethereum.isMetaMask),
-          provider: window.ethereum?.isMetaMask ? window.ethereum : undefined
-        },
-        {
+          installed: !!metamaskProvider,
+          provider: metamaskProvider
+        })
+        
+        // Phantom
+        const phantomProvider = providers.find((p: any) => p.isPhantom === true || p.phantom)
+        wallets.push({
           name: 'Phantom',
           type: 'phantom',
           icon: '👻',
-          installed: !!(window.ethereum && window.ethereum.isPhantom),
-          provider: window.ethereum?.isPhantom ? window.ethereum : undefined
-        },
-        {
+          installed: !!phantomProvider,
+          provider: phantomProvider
+        })
+        
+        // Coinbase
+        const coinbaseProvider = providers.find((p: any) => p.isCoinbaseWallet === true || p.coinbase)
+        wallets.push({
           name: 'Coinbase Wallet',
           type: 'coinbase',
           icon: '🔵',
-          installed: !!(window.ethereum && window.ethereum.isCoinbaseWallet),
-          provider: window.ethereum?.isCoinbaseWallet ? window.ethereum : undefined
-        },
-        {
+          installed: !!coinbaseProvider,
+          provider: coinbaseProvider
+        })
+        
+        // Trust
+        const trustProvider = providers.find((p: any) => p.isTrust === true || p.trust)
+        wallets.push({
           name: 'Trust Wallet',
           type: 'trust',
           icon: '🛡️',
-          installed: !!(window.ethereum && window.ethereum.isTrust),
-          provider: window.ethereum?.isTrust ? window.ethereum : undefined
+          installed: !!trustProvider,
+          provider: trustProvider
+        })
+      } else if (window.ethereum) {
+        console.log('=== Single Provider Detected ===')
+        console.log('Provider details:', {
+          isMetaMask: window.ethereum.isMetaMask,
+          isPhantom: window.ethereum.isPhantom,
+          isCoinbaseWallet: window.ethereum.isCoinbaseWallet,
+          isTrust: window.ethereum.isTrust,
+          _metamask: (window.ethereum as any)._metamask,
+          phantom: (window.ethereum as any).phantom
+        })
+        
+        // Single provider - improved MetaMask detection
+        const isMetaMask = !!(window.ethereum.isMetaMask === true || (window.ethereum as any)._metamask) && !window.ethereum.isPhantom
+        const isPhantom = !!(window.ethereum.isPhantom === true || (window.ethereum as any).phantom)
+        const isCoinbase = !!(window.ethereum.isCoinbaseWallet === true || (window.ethereum as any).coinbase)
+        const isTrust = !!(window.ethereum.isTrust === true || (window.ethereum as any).trust)
+        
+        console.log('Wallet detection results:', { isMetaMask, isPhantom, isCoinbase, isTrust })
+        
+        wallets.push({
+          name: 'MetaMask',
+          type: 'metamask',
+          icon: '🦊',
+          installed: isMetaMask,
+          provider: isMetaMask ? window.ethereum : undefined
+        })
+        
+        wallets.push({
+          name: 'Phantom',
+          type: 'phantom',
+          icon: '👻',
+          installed: isPhantom,
+          provider: isPhantom ? window.ethereum : undefined
+        })
+        
+        wallets.push({
+          name: 'Coinbase Wallet',
+          type: 'coinbase',
+          icon: '🔵',
+          installed: isCoinbase,
+          provider: isCoinbase ? window.ethereum : undefined
+        })
+        
+        wallets.push({
+          name: 'Trust Wallet',
+          type: 'trust',
+          icon: '🛡️',
+          installed: isTrust,
+          provider: isTrust ? window.ethereum : undefined
+        })
+      } else {
+        console.log('=== No Ethereum Provider ===')
+        // No ethereum provider
+        wallets.push(
+          {
+            name: 'MetaMask',
+            type: 'metamask',
+            icon: '🦊',
+            installed: false,
+            provider: undefined
+          },
+          {
+            name: 'Phantom',
+            type: 'phantom',
+            icon: '👻',
+            installed: false,
+            provider: undefined
+          },
+          {
+            name: 'Coinbase Wallet',
+            type: 'coinbase',
+            icon: '🔵',
+            installed: false,
+            provider: undefined
+          },
+          {
+            name: 'Trust Wallet',
+            type: 'trust',
+            icon: '🛡️',
+            installed: false,
+            provider: undefined
+          }
+        )
+      }
+      
+      // Add WalletConnect for mobile support
+      wallets.push({
+        name: 'WalletConnect',
+        type: 'walletconnect',
+        icon: '📱',
+        installed: true, // WalletConnect is always "available"
+        provider: undefined // Will be created dynamically
+      })
+      
+      // FALLBACK: If MetaMask isn't detected but we know it's likely installed
+      const metamaskWallet = wallets.find(w => w.type === 'metamask')
+      if (!metamaskWallet?.installed && window.ethereum) {
+        console.log('=== MetaMask Fallback Detection ===')
+        // Try to detect MetaMask by checking for specific methods or properties
+        const hasMetaMaskMethods = window.ethereum.request && typeof window.ethereum.request === 'function'
+        const hasMetaMaskInUserAgent = navigator.userAgent.includes('MetaMask')
+        const hasMetaMaskDomain = window.location.hostname.includes('metamask') || document.domain.includes('metamask')
+        
+        // If we have ethereum object with request method, assume it's MetaMask as fallback
+        if (hasMetaMaskMethods && !wallets.some(w => w.installed && w.type !== 'walletconnect')) {
+          console.log('Fallback MetaMask detection triggered')
+          const metamaskIndex = wallets.findIndex(w => w.type === 'metamask')
+          if (metamaskIndex !== -1) {
+            wallets[metamaskIndex] = {
+              name: 'MetaMask (detected)',
+              type: 'metamask',
+              icon: '🦊',
+              installed: true,
+              provider: window.ethereum
+            }
+          }
         }
-      ]
+      }
+      
+      console.log('=== Final Wallet List ===')
+      wallets.forEach(wallet => {
+        console.log(`${wallet.name}: installed=${wallet.installed}, provider=${!!wallet.provider}`)
+      })
+      
       setAvailableWallets(wallets)
     }
 
-    detectWallets()
+    // Add multiple detection attempts to ensure all wallet providers are loaded
+    detectWallets() // Run immediately
+    const timeoutId1 = setTimeout(detectWallets, 100) // After 100ms
+    const timeoutId2 = setTimeout(detectWallets, 500) // After 500ms
+    const timeoutId3 = setTimeout(detectWallets, 1000) // After 1s (for slow loading wallets)
+    
+    return () => {
+      clearTimeout(timeoutId1)
+      clearTimeout(timeoutId2)
+      clearTimeout(timeoutId3)
+    }
   }, [])
 
   const connectWallet = async (walletType?: WalletType) => {
@@ -90,8 +264,13 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       setIsConnecting(true)
       setError(null)
 
+      console.log('Connecting wallet...', { walletType, availableWallets })
+
       // Always disconnect first to ensure clean connection
       disconnectWallet()
+      
+      // Wait a moment for disconnection to complete
+      await new Promise(resolve => setTimeout(resolve, 100))
 
       // If no wallet type specified, try to find the first available one
       if (!walletType) {
@@ -102,35 +281,85 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         walletType = availableWallet.type
       }
 
+      console.log('Selected wallet type:', walletType)
+
       let walletProvider: any
       
+      // Get the specific wallet provider based on type
       switch (walletType) {
         case 'metamask':
-          if (!window.ethereum?.isMetaMask) {
-            throw new Error("MetaMask not installed")
+          if ((window.ethereum as any)?.providers) {
+            // Multiple wallets detected, find MetaMask specifically
+            console.log('Multiple providers detected, finding MetaMask...')
+            walletProvider = (window.ethereum as any).providers.find((p: any) => (p.isMetaMask === true || p._metamask) && !p.isPhantom)
+          } else if ((window.ethereum?.isMetaMask === true || (window.ethereum as any)?._metamask) && !window.ethereum?.isPhantom) {
+            console.log('Single MetaMask provider detected')
+            walletProvider = window.ethereum
           }
-          walletProvider = window.ethereum
+          
+          // Fallback: if we can't find specific MetaMask provider, try window.ethereum anyway
+          if (!walletProvider && window.ethereum) {
+            console.log('Using fallback window.ethereum for MetaMask')
+            walletProvider = window.ethereum
+          }
+          
+          if (!walletProvider) {
+            console.error('MetaMask provider not found')
+            throw new Error("MetaMask not installed or not detected. Please install MetaMask browser extension.")
+          }
           break
           
         case 'phantom':
-          if (!window.ethereum?.isPhantom) {
+          if ((window.ethereum as any)?.providers) {
+            // Multiple wallets detected, find Phantom specifically  
+            walletProvider = (window.ethereum as any).providers.find((p: any) => p.isPhantom === true || p.phantom)
+          } else if (window.ethereum?.isPhantom === true || (window.ethereum as any)?.phantom) {
+            walletProvider = window.ethereum
+          }
+          if (!walletProvider) {
             throw new Error("Phantom wallet not installed or Ethereum mode not enabled")
           }
-          walletProvider = window.ethereum
           break
           
         case 'coinbase':
-          if (!window.ethereum?.isCoinbaseWallet) {
+          if ((window.ethereum as any)?.providers) {
+            walletProvider = (window.ethereum as any).providers.find((p: any) => p.isCoinbaseWallet === true || p.coinbase)
+          } else if (window.ethereum?.isCoinbaseWallet === true || (window.ethereum as any)?.coinbase) {
+            walletProvider = window.ethereum
+          }
+          if (!walletProvider) {
             throw new Error("Coinbase Wallet not installed")
           }
-          walletProvider = window.ethereum
           break
           
         case 'trust':
-          if (!window.ethereum?.isTrust) {
+          if ((window.ethereum as any)?.providers) {
+            walletProvider = (window.ethereum as any).providers.find((p: any) => p.isTrust === true || p.trust)
+          } else if (window.ethereum?.isTrust === true || (window.ethereum as any)?.trust) {
+            walletProvider = window.ethereum
+          }
+          if (!walletProvider) {
             throw new Error("Trust Wallet not installed")
           }
-          walletProvider = window.ethereum
+          break
+
+        case 'walletconnect':
+          // For mobile support - open MetaMask mobile app or show QR
+          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+          
+          if (isMobile) {
+            // Try to open MetaMask mobile app first
+            const deepLink = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`
+            window.open(deepLink, '_blank')
+            throw new Error("Opening MetaMask mobile app... If it doesn't open, please use the MetaMask browser or install the MetaMask app.")
+          } else {
+            // Desktop - try to use installed wallet or show instructions
+            if (window.ethereum) {
+              walletProvider = window.ethereum
+            } else {
+              throw new Error("For mobile wallets, please use your wallet's built-in browser or scan QR codes from supported dApps.")
+            }
+          }
           break
           
         default:
@@ -140,6 +369,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           walletProvider = window.ethereum
       }
 
+      console.log(`Connecting to ${walletType}...`, { provider: walletProvider })
+      
       const browserProvider = new ethers.BrowserProvider(walletProvider)
       
       // Request accounts with explicit wallet selection
@@ -196,9 +427,30 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         params: [{ chainId: hexChainId }],
       })
 
-      // Update chainId state
-      const network = await provider.getNetwork()
-      setChainId(Number(network.chainId))
+      // Wait for network change and update state
+      try {
+        const network = await provider.getNetwork()
+        setChainId(Number(network.chainId))
+        
+        // Reload balances on new network
+        if (account) {
+          await loadBalances(provider, account)
+        }
+      } catch (networkError) {
+        // Network change happened but might take time to reflect
+        console.log('Network switch initiated, waiting for confirmation...')
+        setTimeout(async () => {
+          try {
+            const network = await provider.getNetwork()
+            setChainId(Number(network.chainId))
+            if (account) {
+              await loadBalances(provider, account)
+            }
+          } catch (e) {
+            console.warn('Could not confirm network change:', e)
+          }
+        }, 1000)
+      }
     } catch (err: any) {
       if (err.code === 4902) {
         // Chain not added to wallet, try adding it
@@ -208,6 +460,11 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           throw new Error(`Chain ${targetChainId} not supported. Please add it manually.`)
         }
       } else {
+        // Don't throw on network change events, they're expected
+        if (err.code === 'NETWORK_ERROR' && err.message.includes('network changed')) {
+          console.log('Network change detected:', err.message)
+          return
+        }
         throw new Error(err.message || "Failed to switch network")
       }
     }
@@ -247,20 +504,38 @@ export function Web3Provider({ children }: { children: ReactNode }) {
 
   const loadBalances = async (browserProvider: ethers.BrowserProvider, address: string) => {
     try {
-      const nativeBal = await browserProvider.getBalance(address)
-      setNativeBalance(ethers.formatEther(nativeBal))
+      // Get network first
+      const network = await browserProvider.getNetwork()
+      const chainId = Number(network.chainId)
+      
+      console.log('Loading balances for network:', chainId)
+      
+      // Get native balance
+      const balance = await browserProvider.getBalance(address)
+      setNativeBalance(ethers.formatEther(balance))
 
-      if (CONTRACTS.RGC_TOKEN) {
-        const rgcContract = new ethers.Contract(
-          CONTRACTS.RGC_TOKEN,
-          ["function balanceOf(address) view returns (uint256)"],
-          browserProvider,
-        )
-        const rgcBal = await rgcContract.balanceOf(address)
-        setRgcBalance(ethers.formatEther(rgcBal))
+      // Only try to load RGC balance if we have a valid contract address
+      if (CONTRACTS.RGC_TOKEN && CONTRACTS.RGC_TOKEN !== "" && CONTRACTS.RGC_TOKEN !== "0x0000000000000000000000000000000000000000") {
+        try {
+          const rgcContract = new ethers.Contract(
+            CONTRACTS.RGC_TOKEN,
+            RGC_TOKEN_ABI,
+            browserProvider,
+          )
+          const rgcBal = await rgcContract.balanceOf(address)
+          setRgcBalance(ethers.formatEther(rgcBal))
+        } catch (rgcError) {
+          console.warn('Failed to load RGC balance:', rgcError)
+          setRgcBalance("0")
+        }
+      } else {
+        console.warn('RGC contract address not configured')
+        setRgcBalance("0")
       }
     } catch (err) {
-      console.error("Error loading balances:", err)
+      console.error("Failed to load balances:", err)
+      setNativeBalance("0")
+      setRgcBalance("0")
     }
   }
 

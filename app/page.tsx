@@ -313,15 +313,15 @@ export default function GamePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 lg:py-8">
       <ContractStatus />
       
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Main Game Area */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {/* Game Display */}
           <Card className="border-primary/20 shadow-2xl">
-            <CardContent className="p-4">
+            <CardContent className="p-2 sm:p-4">
               <div className="relative aspect-video rounded-lg overflow-hidden border-2 border-purple-500/30">
                 <RocketAnimation
                   multiplier={currentMultiplier}
@@ -333,31 +333,31 @@ export default function GamePage() {
                 {/* Status Messages Overlay */}
                 {gameState === "crashed" && (
                   <div className="absolute inset-0 flex items-center justify-center bg-red-500/10 backdrop-blur-sm">
-                    <div className="text-center space-y-4 animate-pulse">
-                      <div className="text-8xl">💥</div>
-                      <p className="text-5xl font-bold text-red-400 drop-shadow-lg">CRASHED!</p>
-                      <p className="text-2xl text-red-300">At {currentMultiplier.toFixed(2)}x multiplier</p>
-                      <p className="text-lg text-red-200">Better luck next time!</p>
+                    <div className="text-center space-y-2 sm:space-y-4 animate-pulse px-4">
+                      <div className="text-4xl sm:text-6xl lg:text-8xl">💥</div>
+                      <p className="text-2xl sm:text-4xl lg:text-5xl font-bold text-red-400 drop-shadow-lg">CRASHED!</p>
+                      <p className="text-lg sm:text-xl lg:text-2xl text-red-300">At {currentMultiplier.toFixed(2)}x multiplier</p>
+                      <p className="text-sm sm:text-base lg:text-lg text-red-200">Better luck next time!</p>
                     </div>
                   </div>
                 )}
 
                 {gameState === "won" && winnings && (
                   <div className="absolute inset-0 flex items-center justify-center bg-green-500/10 backdrop-blur-sm">
-                    <div className="text-center space-y-4 animate-bounce">
-                      <div className="text-8xl">🎉</div>
-                      <p className="text-5xl font-bold text-green-400 drop-shadow-lg">YOU WON!</p>
-                      <p className="text-3xl text-green-300">+{winnings} RGC</p>
-                      <p className="text-xl text-green-200">Cashed out at {currentMultiplier.toFixed(2)}x</p>
+                    <div className="text-center space-y-2 sm:space-y-4 animate-bounce px-4">
+                      <div className="text-4xl sm:text-6xl lg:text-8xl">🎉</div>
+                      <p className="text-2xl sm:text-4xl lg:text-5xl font-bold text-green-400 drop-shadow-lg">YOU WON!</p>
+                      <p className="text-xl sm:text-2xl lg:text-3xl text-green-300">+{winnings} RGC</p>
+                      <p className="text-sm sm:text-lg lg:text-xl text-green-200">Cashed out at {currentMultiplier.toFixed(2)}x</p>
                     </div>
                   </div>
                 )}
 
                 {loading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-                    <div className="text-center space-y-4">
-                      <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-                      <p className="text-xl text-white">🚀 Preparing launch...</p>
+                    <div className="text-center space-y-2 sm:space-y-4 px-4">
+                      <Loader2 className="h-8 w-8 sm:h-12 sm:w-12 animate-spin text-primary mx-auto" />
+                      <p className="text-sm sm:text-lg lg:text-xl text-white">🚀 Preparing launch...</p>
                     </div>
                   </div>
                 )}
@@ -370,7 +370,7 @@ export default function GamePage() {
         </div>
 
         {/* Betting Panel */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Place Your Bet</CardTitle>
@@ -385,17 +385,17 @@ export default function GamePage() {
               ) : (
                 <>
                   {/* Balance Display */}
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-sm text-muted-foreground mb-1">Your RGC Balance</p>
-                    <div className="flex items-center gap-2">
+                  <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-1">Your RGC Balance</p>
+                    <div className="flex items-center gap-1 sm:gap-2">
                       <Image
                         src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/My_Coin.png`}
                         alt="RGC"
-                        width={24}
-                        height={24}
-                        className="object-contain"
+                        width={20}
+                        height={20}
+                        className="sm:w-6 sm:h-6 object-contain"
                       />
-                      <p className="text-2xl font-bold">{Number.parseFloat(rgcBalance).toFixed(2)} RGC</p>
+                      <p className="text-lg sm:text-xl lg:text-2xl font-bold">{Number.parseFloat(rgcBalance).toFixed(2)} RGC</p>
                     </div>
                   </div>
 
@@ -411,12 +411,13 @@ export default function GamePage() {
                       disabled={gameState !== "idle" || loading}
                       className="text-lg"
                     />
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-4 gap-1 sm:gap-2">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => setBetAmount((Number.parseFloat(rgcBalance) * 0.25).toFixed(2))}
                         disabled={gameState !== "idle"}
+                        className="text-xs sm:text-sm px-1 sm:px-3"
                       >
                         25%
                       </Button>
@@ -425,6 +426,7 @@ export default function GamePage() {
                         variant="outline"
                         onClick={() => setBetAmount((Number.parseFloat(rgcBalance) * 0.5).toFixed(2))}
                         disabled={gameState !== "idle"}
+                        className="text-xs sm:text-sm px-1 sm:px-3"
                       >
                         50%
                       </Button>
@@ -433,6 +435,7 @@ export default function GamePage() {
                         variant="outline"
                         onClick={() => setBetAmount((Number.parseFloat(rgcBalance) * 0.75).toFixed(2))}
                         disabled={gameState !== "idle"}
+                        className="text-xs sm:text-sm px-1 sm:px-3"
                       >
                         75%
                       </Button>
@@ -441,6 +444,7 @@ export default function GamePage() {
                         variant="outline"
                         onClick={() => setBetAmount(rgcBalance)}
                         disabled={gameState !== "idle"}
+                        className="text-xs sm:text-sm px-1 sm:px-3"
                       >
                         Max
                       </Button>
@@ -473,16 +477,18 @@ export default function GamePage() {
 
                   {/* Action Buttons */}
                   {gameState === "idle" && (
-                    <Button onClick={handlePlaceBet} disabled={loading} className="w-full h-12 text-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg transform transition-all duration-200 hover:scale-105" size="lg">
+                    <Button onClick={handlePlaceBet} disabled={loading} className="w-full h-10 sm:h-12 text-sm sm:text-base lg:text-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg transform transition-all duration-200 hover:scale-105" size="lg">
                       {loading ? (
                         <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Launching Rocket...
+                          <Loader2 className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                          <span className="hidden sm:inline">Launching Rocket...</span>
+                          <span className="sm:hidden">Launching...</span>
                         </>
                       ) : (
                         <>
-                          <Rocket className="mr-2 h-5 w-5" />
-                          🚀 LAUNCH ROCKET ({betAmount} RGC) 🚀
+                          <Rocket className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                          <span className="hidden sm:inline">🚀 LAUNCH ROCKET ({betAmount} RGC) 🚀</span>
+                          <span className="sm:hidden">🚀 LAUNCH ({betAmount}) 🚀</span>
                         </>
                       )}
                     </Button>
@@ -492,35 +498,37 @@ export default function GamePage() {
                     <Button
                       onClick={handleCashOut}
                       disabled={loading}
-                      className="w-full h-12 text-lg bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-lg transform transition-all duration-200 hover:scale-105 animate-pulse"
+                      className="w-full h-10 sm:h-12 text-sm sm:text-base lg:text-lg bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-lg transform transition-all duration-200 hover:scale-105 animate-pulse"
                       size="lg"
                     >
                       {loading ? (
                         <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Cashing Out...
+                          <Loader2 className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                          <span className="hidden sm:inline">Cashing Out...</span>
+                          <span className="sm:hidden">Cashing...</span>
                         </>
                       ) : (
                         <>
-                          <TrendingUp className="mr-2 h-5 w-5" />
-                          🚀 CASH OUT {currentMultiplier.toFixed(2)}x 🚀
+                          <TrendingUp className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                          <span className="hidden sm:inline">🚀 CASH OUT {currentMultiplier.toFixed(2)}x 🚀</span>
+                          <span className="sm:hidden">🚀 CASH OUT {currentMultiplier.toFixed(2)}x</span>
                         </>
                       )}
                     </Button>
                   )}
 
                   {(gameState === "crashed" || gameState === "won") && (
-                    <Button onClick={handlePlayAgain} className="w-full h-12 text-lg" size="lg">
+                    <Button onClick={handlePlayAgain} className="w-full h-10 sm:h-12 text-sm sm:text-base lg:text-lg" size="lg">
                       Play Again
                     </Button>
                   )}
 
                   {/* Game Info */}
-                  <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
+                  <div className="text-xs sm:text-sm text-muted-foreground space-y-1 pt-2 border-t">
                     <p>Min Bet: <span className="text-primary font-semibold">{minBet} RGC</span></p>
                     <p>Max Bet: <span className="text-primary font-semibold">{maxBet} RGC</span></p>
                     <p>House Edge: <span className="text-destructive font-semibold">2%</span></p>
-                    <p className="text-xs mt-2 text-white">🎯 Your bet: <span className="font-bold">{betAmount || '0'} RGC</span></p>
+                    <p className="text-xs sm:text-sm mt-2 text-white">🎯 Your bet: <span className="font-bold">{betAmount || '0'} RGC</span></p>
                   </div>
                 </>
               )}
@@ -530,9 +538,9 @@ export default function GamePage() {
           {/* How to Play */}
           <Card className="bg-muted/30">
             <CardHeader>
-              <CardTitle className="text-lg">How to Play</CardTitle>
+              <CardTitle className="text-base sm:text-lg">How to Play</CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-2">
+            <CardContent className="text-xs sm:text-sm text-muted-foreground space-y-2">
               <ol className="list-decimal list-inside space-y-1">
                 <li>Enter your bet amount in RGC</li>
                 <li>Click "Place Bet" and approve the transaction</li>

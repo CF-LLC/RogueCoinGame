@@ -14,7 +14,7 @@ import { GetPOLGuide } from "@/components/get-pol-guide"
 import Image from "next/image"
 
 export default function AirdropPage() {
-  const { account, signer, refreshBalances, nativeBalance } = useWeb3()
+  const { account, signer, provider, refreshBalances, nativeBalance } = useWeb3()
   const [loading, setLoading] = useState(false)
   const [hasClaimed, setHasClaimed] = useState(false)
   const [airdropAmount, setAirdropAmount] = useState("0")
@@ -33,46 +33,56 @@ export default function AirdropPage() {
     }
   }, [account, signer])
 
-  const loadAirdropData = async () => {
-    if (!signer || !account) return
-
-    // Check if contracts are configured
-    if (!CONTRACTS.AIRDROP || CONTRACTS.AIRDROP === "") {
-      console.log("Airdrop contract not configured")
-      // Set default values for demo purposes
-      setAirdropAmount("1000")
-      setClaimFee("0.01")
-      setStats({
-        totalClaimed: "0",
-        totalFees: "0",
-        remaining: "1000000",
-      })
-      return
-    }
+    const loadAirdropData = async () => {
+    if (!provider) return
 
     try {
-      const airdropContract = new ethers.Contract(CONTRACTS.AIRDROP, AIRDROP_ABI, signer)
+      const network = await provider.getNetwork()
+      console.log('Current network:', Number(network.chainId))
+      
+      // Check if airdrop contract is configured
+      if (!CONTRACTS.AIRDROP || CONTRACTS.AIRDROP === "") {
+        console.warn("Airdrop contract not configured")
+        setError("Airdrop contract not configured. Please check environment variables.")
+        return
+      }
 
-      // Check if user has claimed
-      const claimed = await airdropContract.hasClaimed(account)
-      setHasClaimed(claimed)
+      console.log('Airdrop contract address:', CONTRACTS.AIRDROP)
+      
+      // Check if contract exists on this network
+      const code = await provider.getCode(CONTRACTS.AIRDROP)
+      console.log('Contract bytecode length:', code.length)
+      
+      if (code === "0x") {
+        console.warn("Airdrop contract not deployed on this network")
+        setError(`Airdrop contract not deployed on network ${Number(network.chainId)}. Please deploy contracts or switch to the correct network.`)
+        return
+      }
 
-      // Get airdrop amount and fee
-      const amount = await airdropContract.airdropAmount()
-      const fee = await airdropContract.claimFee()
-      setAirdropAmount(ethers.formatEther(amount))
-      setClaimFee(ethers.formatEther(fee))
+      const airdropContract = new ethers.Contract(CONTRACTS.AIRDROP, AIRDROP_ABI, provider)
 
-      // Get stats
-      const contractStats = await airdropContract.getStats()
-      setStats({
-        totalClaimed: ethers.formatEther(contractStats[2]),
-        totalFees: ethers.formatEther(contractStats[3]),
-        remaining: ethers.formatEther(contractStats[4]),
-      })
-    } catch (err: any) {
+      // Test basic contract calls
+      try {
+        const stats = await airdropContract.getStats()
+        console.log('Contract stats:', stats)
+        
+        const airdropAmt = await airdropContract.airdropAmount()
+        const fee = await airdropContract.claimFee()
+        
+        setAirdropAmount(ethers.formatEther(airdropAmt))
+        setClaimFee(ethers.formatEther(fee))
+        
+        if (account) {
+          const claimed = await airdropContract.hasClaimed(account)
+          setHasClaimed(claimed)
+        }
+      } catch (contractError) {
+        console.error("Contract call failed:", contractError)
+        setError("Contract calls failed. The contract may not be properly configured.")
+      }
+    } catch (err) {
       console.error("Error loading airdrop data:", err)
-      setError("Failed to load airdrop data. Contracts may not be deployed yet.")
+      setError("Failed to load airdrop data: " + (err as Error).message)
     }
   }
 
@@ -103,7 +113,41 @@ export default function AirdropPage() {
     setTxHash(null)
 
     try {
+      // Validate contract deployment first
+      if (!signer.provider) {
+        throw new Error("No provider available")
+      }
+      
+      const code = await signer.provider.getCode(CONTRACTS.AIRDROP)
+      if (code === "0x") {
+        throw new Error("Airdrop contract not deployed on this network. Please switch to the correct network or deploy contracts.")
+      }
+
       const airdropContract = new ethers.Contract(CONTRACTS.AIRDROP, AIRDROP_ABI, signer)
+
+      // Check if user already claimed
+      try {
+        const alreadyClaimed = await airdropContract.hasClaimed(account)
+        if (alreadyClaimed) {
+          throw new Error("You have already claimed your airdrop")
+        }
+      } catch (checkError) {
+        console.warn("Could not verify claim status:", checkError)
+      }
+
+      // Estimate gas first to catch contract errors early
+      try {
+        const gasEstimate = await airdropContract.claimAirdrop.estimateGas({
+          value: ethers.parseEther(claimFee),
+        })
+        console.log("Gas estimate:", gasEstimate.toString())
+      } catch (gasError: any) {
+        console.error("Gas estimation failed:", gasError)
+        if (gasError.message && gasError.message.includes("missing revert data")) {
+          throw new Error("Contract function would fail. This usually means the contract is not properly deployed or configured on this network.")
+        }
+        throw new Error("Transaction would fail: " + (gasError.reason || gasError.message || "Unknown error"))
+      }
 
       // Call claimAirdrop with POL fee
       const tx = await airdropContract.claimAirdrop({
@@ -146,20 +190,20 @@ export default function AirdropPage() {
 
   if (!account) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 lg:py-8">
         <ContractStatus />
-        <div className="max-w-2xl mx-auto text-center space-y-6">
-          <div className="inline-flex items-center justify-center w-32 h-32 mb-4">
+        <div className="max-w-2xl mx-auto text-center space-y-4 sm:space-y-6">
+          <div className="inline-flex items-center justify-center w-24 h-24 sm:w-32 sm:h-32 mb-4">
             <Image
               src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/My_Coin.png`}
               alt="RogueCoin"
-              width={128}
-              height={128}
-              className="object-contain"
+              width={96}
+              height={96}
+              className="sm:w-32 sm:h-32 object-contain"
             />
           </div>
-          <h1 className="text-4xl font-bold text-balance">RogueCoin Airdrop</h1>
-          <p className="text-xl text-muted-foreground text-balance">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-balance">RogueCoin Airdrop</h1>
+          <p className="text-base sm:text-lg lg:text-xl text-muted-foreground text-balance">
             Connect your wallet to claim free RGC tokens
           </p>
         </div>
@@ -168,23 +212,23 @@ export default function AirdropPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 lg:py-8">
       <ContractStatus />
       
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
         {/* Hero Section */}
-        <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-32 h-32 mb-4">
+        <div className="text-center space-y-3 sm:space-y-4">
+          <div className="inline-flex items-center justify-center w-24 h-24 sm:w-32 sm:h-32 mb-4">
             <Image
               src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/My_Coin.png`}
               alt="RogueCoin"
-              width={128}
-              height={128}
-              className="object-contain"
+              width={96}
+              height={96}
+              className="sm:w-32 sm:h-32 object-contain"
             />
           </div>
-          <h1 className="text-4xl font-bold text-balance">RogueCoin Airdrop</h1>
-          <p className="text-xl text-muted-foreground text-balance">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-balance">RogueCoin Airdrop</h1>
+          <p className="text-base sm:text-lg lg:text-xl text-muted-foreground text-balance">
             Claim your free RGC tokens and start playing the crash game
           </p>
         </div>
@@ -192,31 +236,31 @@ export default function AirdropPage() {
         {/* Main Claim Card */}
         <Card className="border-primary/20">
           <CardHeader>
-            <CardTitle>Claim Your Tokens</CardTitle>
-            <CardDescription>Pay a small ETH fee to receive RGC tokens</CardDescription>
+            <CardTitle className="text-lg sm:text-xl">Claim Your Tokens</CardTitle>
+            <CardDescription className="text-sm sm:text-base">Pay a small POL fee to receive RGC tokens</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6">
             {/* Airdrop Details */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground mb-1">Airdrop Amount</p>
-                <div className="flex items-center gap-2">
-                  <Image src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/My_Coin.png`} alt="RGC" width={24} height={24} className="object-contain" />
-                  <p className="text-2xl font-bold text-primary">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-3 sm:p-4 rounded-lg bg-muted/50">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">Airdrop Amount</p>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Image src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/My_Coin.png`} alt="RGC" width={20} height={20} className="sm:w-6 sm:h-6 object-contain" />
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">
                     {Number.parseFloat(airdropAmount).toLocaleString()} RGC
                   </p>
                 </div>
               </div>
-              <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground mb-1">Claim Fee</p>
-                <p className="text-2xl font-bold text-secondary">{claimFee} POL</p>
+              <div className="p-3 sm:p-4 rounded-lg bg-muted/50">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">Claim Fee</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-secondary">{claimFee} POL</p>
               </div>
             </div>
             
             {/* Balance Info */}
-            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <p className="text-sm text-muted-foreground mb-1">Your POL Balance</p>
-              <p className="text-lg font-semibold">{Number.parseFloat(nativeBalance).toFixed(4)} POL</p>
+            <div className="p-3 sm:p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-1">Your POL Balance</p>
+              <p className="text-base sm:text-lg font-semibold">{Number.parseFloat(nativeBalance).toFixed(4)} POL</p>
               <p className="text-xs text-muted-foreground mt-1">
                 You need {claimFee} POL for the claim fee + additional POL for gas fees
               </p>
@@ -257,28 +301,31 @@ export default function AirdropPage() {
             )}
 
             {/* Claim Button */}
-            <Button onClick={handleClaim} disabled={loading || hasClaimed} className="w-full h-12 text-lg" size="lg">
+            <Button onClick={handleClaim} disabled={loading || hasClaimed} className="w-full h-10 sm:h-12 text-sm sm:text-base lg:text-lg" size="lg">
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Claiming...
+                  <Loader2 className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                  <span className="hidden sm:inline">Claiming...</span>
+                  <span className="sm:hidden">Claiming...</span>
                 </>
               ) : hasClaimed ? (
                 <>
-                  <CheckCircle2 className="mr-2 h-5 w-5" />
-                  Already Claimed
+                  <CheckCircle2 className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="hidden sm:inline">Already Claimed</span>
+                  <span className="sm:hidden">Claimed</span>
                 </>
               ) : (
                 <>
-                  <Gift className="mr-2 h-5 w-5" />
-                  Claim {airdropAmount} RGC
+                  <Gift className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="hidden sm:inline">Claim {airdropAmount} RGC</span>
+                  <span className="sm:hidden">Claim RGC</span>
                 </>
               )}
             </Button>
 
             {/* Instructions */}
             {!hasClaimed && (
-              <div className="text-sm text-muted-foreground space-y-2">
+              <div className="text-xs sm:text-sm text-muted-foreground space-y-2">
                 <p className="font-semibold">How it works:</p>
                 <ol className="list-decimal list-inside space-y-1 ml-2">
                   <li>Make sure you have enough POL in your wallet</li>
@@ -294,31 +341,31 @@ export default function AirdropPage() {
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Total Claimed</CardDescription>
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardDescription className="text-xs sm:text-sm">Total Claimed</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{Number.parseFloat(stats.totalClaimed).toLocaleString()} RGC</p>
+              <p className="text-lg sm:text-xl lg:text-2xl font-bold">{Number.parseFloat(stats.totalClaimed).toLocaleString()} RGC</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Total Fees Collected</CardDescription>
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardDescription className="text-xs sm:text-sm">Total Fees Collected</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{Number.parseFloat(stats.totalFees).toFixed(4)} POL</p>
+              <p className="text-lg sm:text-xl lg:text-2xl font-bold">{Number.parseFloat(stats.totalFees).toFixed(4)} POL</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Remaining Supply</CardDescription>
+          <Card className="sm:col-span-2 lg:col-span-1">
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardDescription className="text-xs sm:text-sm">Remaining Supply</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{Number.parseFloat(stats.remaining).toLocaleString()} RGC</p>
+              <p className="text-lg sm:text-xl lg:text-2xl font-bold">{Number.parseFloat(stats.remaining).toLocaleString()} RGC</p>
             </CardContent>
           </Card>
         </div>
@@ -326,9 +373,9 @@ export default function AirdropPage() {
         {/* Info Section */}
         <Card className="bg-muted/30">
           <CardHeader>
-            <CardTitle className="text-lg">About the Airdrop</CardTitle>
+            <CardTitle className="text-base sm:text-lg">About the Airdrop</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <CardContent className="space-y-3 text-xs sm:text-sm text-muted-foreground">
             <p>
               The RogueCoin airdrop provides new users with tokens to start playing the crash game. Each wallet can
               claim once.

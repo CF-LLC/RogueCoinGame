@@ -32,7 +32,7 @@ export function GameHistory() {
     if (!signer || !account) return
 
     // Check if contracts are configured
-    if (!CONTRACTS.CRASH_GAME || CONTRACTS.CRASH_GAME === "0x0000000000000000000000000000000000000000") {
+    if (!CONTRACTS.CRASH_GAME || CONTRACTS.CRASH_GAME === "" || CONTRACTS.CRASH_GAME === "0x0000000000000000000000000000000000000000") {
       console.warn("Crash game contract not configured")
       setRounds([])
       return
@@ -42,29 +42,66 @@ export function GameHistory() {
     try {
       const gameContract = new ethers.Contract(CONTRACTS.CRASH_GAME, CRASH_GAME_ABI, signer)
 
+      // Check if contract exists on this network
+      try {
+        if (!signer.provider) {
+          console.warn("No provider available")
+          setRounds([])
+          return
+        }
+        const code = await signer.provider.getCode(CONTRACTS.CRASH_GAME)
+        if (code === "0x") {
+          console.warn("Crash game contract not deployed on this network")
+          setRounds([])
+          return
+        }
+      } catch (codeError) {
+        console.warn("Could not verify contract deployment:", codeError)
+        setRounds([])
+        return
+      }
+
       // Get player's round IDs
-      const roundIds = await gameContract.getPlayerRounds(account)
+      let roundIds
+      try {
+        roundIds = await gameContract.getPlayerRounds(account)
+      } catch (roundError) {
+        console.warn("Could not get player rounds:", roundError)
+        setRounds([])
+        return
+      }
+
+      // If no rounds or empty result, show empty state
+      if (!roundIds || roundIds.length === 0) {
+        setRounds([])
+        return
+      }
 
       // Load last 10 rounds
       const recentRoundIds = roundIds.slice(-10).reverse()
       const roundsData: Round[] = []
 
       for (const roundId of recentRoundIds) {
-        const round = await gameContract.getRound(roundId)
-        roundsData.push({
-          roundId: Number(roundId),
-          betAmount: ethers.formatEther(round.betAmount),
-          crashMultiplier: Number(round.crashMultiplier) / 100,
-          cashOutMultiplier: Number(round.cashOutMultiplier) / 100,
-          won: round.won,
-          settled: round.settled,
-          timestamp: Number(round.timestamp),
-        })
+        try {
+          const round = await gameContract.getRound(roundId)
+          roundsData.push({
+            roundId: Number(roundId),
+            betAmount: ethers.formatEther(round.betAmount),
+            crashMultiplier: Number(round.crashMultiplier) / 100,
+            cashOutMultiplier: Number(round.cashOutMultiplier) / 100,
+            won: round.won,
+            settled: round.settled,
+            timestamp: Number(round.timestamp),
+          })
+        } catch (roundError) {
+          console.warn(`Could not load round ${roundId}:`, roundError)
+        }
       }
 
       setRounds(roundsData)
     } catch (err) {
       console.error("Error loading history:", err)
+      setRounds([])
     } finally {
       setLoading(false)
     }

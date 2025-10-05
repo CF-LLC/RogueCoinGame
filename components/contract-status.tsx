@@ -37,7 +37,11 @@ export default function ContractStatus() {
           </AlertDescription>
         </Alert>
         
-        {hasInstalledWallets && <WalletSelector />}
+        {hasInstalledWallets && (
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground mb-2">Multiple wallets detected</p>
+          </div>
+        )}
       </div>
     )
   }

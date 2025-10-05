@@ -130,25 +130,25 @@ export default function TokenomicsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 lg:py-8">
       <ContractStatus />
       
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
         {/* Hero Section */}
-        <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-32 h-32 mb-4">
+        <div className="text-center space-y-3 sm:space-y-4">
+          <div className="inline-flex items-center justify-center w-24 h-24 sm:w-32 sm:h-32 mb-4">
             <Image
               src={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/My_Coin.png`}
               alt="RogueCoin"
-              width={128}
-              height={128}
-              className="object-contain"
+              width={96}
+              height={96}
+              className="sm:w-32 sm:h-32 object-contain"
             />
           </div>
-          <h1 className="text-4xl font-bold text-balance bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-balance bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             RogueCoin Tokenomics
           </h1>
-          <p className="text-xl text-muted-foreground text-balance max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg lg:text-xl text-muted-foreground text-balance max-w-2xl mx-auto">
             Comprehensive overview of RGC token distribution, utility, and ecosystem mechanics
           </p>
         </div>
@@ -162,30 +162,31 @@ export default function TokenomicsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Contract Address</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Contract Address</p>
                 <div className="flex items-center gap-2 p-2 bg-background rounded border">
-                  <code className="text-sm flex-1 font-mono">{contractAddress}</code>
+                  <code className="text-xs sm:text-sm flex-1 font-mono break-all">{contractAddress}</code>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => copyToClipboard(contractAddress)}
+                    className="flex-shrink-0"
                   >
-                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {copied ? <Check className="h-3 w-3 sm:h-4 sm:w-4" /> : <Copy className="h-3 w-3 sm:h-4 sm:w-4" />}
                   </Button>
                 </div>
               </div>
               
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Network</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Network</p>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-300">
+                  <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-300 text-xs sm:text-sm">
                     Polygon Mainnet
                   </Badge>
                   <Button variant="outline" size="sm" asChild>
                     <a href={`https://polygonscan.com/token/${contractAddress}`} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4" />
+                      <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
                     </a>
                   </Button>
                 </div>
@@ -195,60 +196,60 @@ export default function TokenomicsPage() {
         </Card>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="distribution">Distribution</TabsTrigger>
-            <TabsTrigger value="utility">Utility</TabsTrigger>
-            <TabsTrigger value="mechanics">Mechanics</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm px-2 sm:px-4 py-2">Overview</TabsTrigger>
+            <TabsTrigger value="distribution" className="text-xs sm:text-sm px-2 sm:px-4 py-2">Distribution</TabsTrigger>
+            <TabsTrigger value="utility" className="text-xs sm:text-sm px-2 sm:px-4 py-2">Utility</TabsTrigger>
+            <TabsTrigger value="mechanics" className="text-xs sm:text-sm px-2 sm:px-4 py-2">Mechanics</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
+          <TabsContent value="overview" className="space-y-4 sm:space-y-6">
             {/* Key Metrics */}
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <Card>
-                <CardHeader className="pb-3">
-                  <CardDescription className="flex items-center gap-2">
-                    <Coins className="h-4 w-4" />
+                <CardHeader className="pb-2 sm:pb-3">
+                  <CardDescription className="flex items-center gap-2 text-xs sm:text-sm">
+                    <Coins className="h-3 w-3 sm:h-4 sm:w-4" />
                     Total Supply
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold text-purple-600">
+                  <p className="text-2xl sm:text-3xl font-bold text-purple-600">
                     {tokenStats ? formatNumber(tokenStats.totalSupply) : "Loading..."}
                   </p>
-                  <p className="text-sm text-muted-foreground">RGC Tokens</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">RGC Tokens</p>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader className="pb-3">
-                  <CardDescription className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4" />
+                <CardHeader className="pb-2 sm:pb-3">
+                  <CardDescription className="flex items-center gap-2 text-xs sm:text-sm">
+                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
                     Trading Status
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
-                    <Badge variant={tokenStats?.tradingEnabled ? "default" : "secondary"}>
+                    <Badge variant={tokenStats?.tradingEnabled ? "default" : "secondary"} className="text-xs sm:text-sm">
                       {tokenStats ? (tokenStats.tradingEnabled ? "Enabled" : "Disabled") : "Loading..."}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">Live on Polygon</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">Live on Polygon</p>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardDescription className="flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
+              <Card className="sm:col-span-2 lg:col-span-1">
+                <CardHeader className="pb-2 sm:pb-3">
+                  <CardDescription className="flex items-center gap-2 text-xs sm:text-sm">
+                    <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
                     Max Transaction
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xl sm:text-2xl font-bold">
                     {tokenStats ? formatNumber(tokenStats.maxTransactionAmount) : "Loading..."}
                   </p>
-                  <p className="text-sm text-muted-foreground">RGC per transaction</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">RGC per transaction</p>
                 </CardContent>
               </Card>
             </div>
@@ -256,43 +257,43 @@ export default function TokenomicsPage() {
             {/* Token Features */}
             <Card>
               <CardHeader>
-                <CardTitle>Token Features</CardTitle>
-                <CardDescription>Key characteristics of RogueCoin</CardDescription>
+                <CardTitle className="text-lg sm:text-xl">Token Features</CardTitle>
+                <CardDescription className="text-sm sm:text-base">Key characteristics of RogueCoin</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <Zap className="h-5 w-5 text-yellow-500 mt-0.5" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <div>
-                        <h4 className="font-semibold">Gaming Utility</h4>
-                        <p className="text-sm text-muted-foreground">Primary currency for crash game betting and rewards</p>
+                        <h4 className="font-semibold text-sm sm:text-base">Gaming Utility</h4>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Primary currency for crash game betting and rewards</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-start gap-3">
-                      <Shield className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 mt-0.5 flex-shrink-0" />
                       <div>
-                        <h4 className="font-semibold">Anti-Whale Protection</h4>
-                        <p className="text-sm text-muted-foreground">Transaction and wallet limits prevent manipulation</p>
+                        <h4 className="font-semibold text-sm sm:text-base">Anti-Whale Protection</h4>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Transaction and wallet limits prevent manipulation</p>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <Globe className="h-5 w-5 text-blue-500 mt-0.5" />
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                       <div>
-                        <h4 className="font-semibold">Polygon Network</h4>
-                        <p className="text-sm text-muted-foreground">Fast, low-cost transactions on Polygon</p>
+                        <h4 className="font-semibold text-sm sm:text-base">Polygon Network</h4>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Fast, low-cost transactions on Polygon</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-start gap-3">
-                      <Users className="h-5 w-5 text-purple-500 mt-0.5" />
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <Users className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500 mt-0.5 flex-shrink-0" />
                       <div>
-                        <h4 className="font-semibold">Community Driven</h4>
-                        <p className="text-sm text-muted-foreground">Governance and ecosystem development</p>
+                        <h4 className="font-semibold text-sm sm:text-base">Community Driven</h4>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Governance and ecosystem development</p>
                       </div>
                     </div>
                   </div>
@@ -454,30 +455,30 @@ export default function TokenomicsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="utility" className="space-y-6">
+          <TabsContent value="utility" className="space-y-4 sm:space-y-6">
             {/* Utility Overview */}
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-yellow-500" />
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                     Gaming Ecosystem
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Crash Game Currency</h4>
-                    <p className="text-sm text-muted-foreground">Primary betting token for the crash game with multiplier rewards</p>
+                <CardContent className="space-y-2 sm:space-y-3">
+                  <div className="space-y-1 sm:space-y-2">
+                    <h4 className="font-medium text-sm sm:text-base">Crash Game Currency</h4>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Primary betting token for the crash game with multiplier rewards</p>
                   </div>
                   
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Airdrop Claims</h4>
-                    <p className="text-sm text-muted-foreground">Free token distribution to bootstrap user adoption</p>
+                  <div className="space-y-1 sm:space-y-2">
+                    <h4 className="font-medium text-sm sm:text-base">Airdrop Claims</h4>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Free token distribution to bootstrap user adoption</p>
                   </div>
                   
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Tournament Entry</h4>
-                    <p className="text-sm text-muted-foreground">Entry fees and prize pools for competitive gaming events</p>
+                  <div className="space-y-1 sm:space-y-2">
+                    <h4 className="font-medium text-sm sm:text-base">Tournament Entry</h4>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Entry fees and prize pools for competitive gaming events</p>
                   </div>
                 </CardContent>
               </Card>
@@ -648,16 +649,16 @@ export default function TokenomicsPage() {
 
         {/* Call to Action */}
         <Card className="text-center bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20">
-          <CardContent className="py-8">
-            <h3 className="text-2xl font-bold mb-4">Ready to Join the RogueCoin Ecosystem?</h3>
-            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+          <CardContent className="py-6 sm:py-8">
+            <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Ready to Join the RogueCoin Ecosystem?</h3>
+            <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6 max-w-2xl mx-auto">
               Start your journey with free tokens from our airdrop, then experience the thrill of the crash game.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+              <Button asChild size="lg" className="text-sm sm:text-base">
                 <a href="/airdrop">Claim Airdrop</a>
               </Button>
-              <Button variant="outline" size="lg" asChild>
+              <Button variant="outline" size="lg" asChild className="text-sm sm:text-base">
                 <a href="/">Play Game</a>
               </Button>
             </div>
