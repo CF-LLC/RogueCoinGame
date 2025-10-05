@@ -42,16 +42,16 @@ export default function TokenomicsPage() {
   const staticTokenStats: TokenStats = {
     totalSupply: "1000000000", // 1 billion tokens
     tradingEnabled: true,
-    maxTransactionAmount: "5000000", // 5M tokens
-    maxWalletAmount: "20000000", // 20M tokens
+    maxTransactionAmount: "20000000", // 2% of total supply
+    maxWalletAmount: "20000000", // 2% of total supply
     releasableTeamTokens: "0",
     distribution: {
-      publicSale: "400000000", // 40%
-      liquidity: "200000000", // 20%
-      team: "150000000", // 15%
-      marketing: "100000000", // 10%
-      development: "100000000", // 10%
-      reserve: "50000000" // 5%
+      publicSale: "300000000", // 30% - Community allocation
+      liquidity: "200000000", // 20% - Liquidity
+      team: "150000000", // 15% - Team & Advisors
+      marketing: "50000000", // 5% - Airdrop/Marketing
+      development: "50000000", // 5% - Development (part of game treasury)
+      reserve: "250000000" // 25% - Reserve (remaining game treasury)
     }
   }
   
@@ -91,6 +91,14 @@ export default function TokenomicsPage() {
         tokenContract.getTokenDistribution()
       ])
 
+      // Map contract distribution to frontend format
+      // Contract returns: [totalSupply, teamAllocation, liquidityAllocation, communityAllocation, airdropAllocation, gameTreasury]
+      const [contractTotalSupply, teamAllocation, liquidityAllocation, communityAllocation, airdropAllocation, gameTreasury] = distribution
+
+      // Calculate development and reserve from game treasury (300M total)
+      const developmentAllocation = ethers.parseEther("50000000") // 50M for development
+      const reserveAllocation = gameTreasury - developmentAllocation // 250M for reserve
+
       // Update with live data
       setTokenStats({
         totalSupply: ethers.formatEther(totalSupply),
@@ -99,12 +107,12 @@ export default function TokenomicsPage() {
         maxWalletAmount: ethers.formatEther(maxWalletAmount),
         releasableTeamTokens: ethers.formatEther(releasableTeam),
         distribution: {
-          publicSale: ethers.formatEther(distribution[0]),
-          liquidity: ethers.formatEther(distribution[1]),
-          team: ethers.formatEther(distribution[2]),
-          marketing: ethers.formatEther(distribution[3]),
-          development: ethers.formatEther(distribution[4]),
-          reserve: ethers.formatEther(distribution[5])
+          publicSale: ethers.formatEther(communityAllocation), // 30% - Community rewards
+          liquidity: ethers.formatEther(liquidityAllocation), // 20% - Liquidity
+          team: ethers.formatEther(teamAllocation), // 15% - Team & Advisors
+          marketing: ethers.formatEther(airdropAllocation), // 5% - Airdrop/Marketing
+          development: ethers.formatEther(developmentAllocation), // 5% - Development
+          reserve: ethers.formatEther(reserveAllocation) // 25% - Reserve
         }
       })
       console.log("Loaded live contract data successfully")
@@ -316,7 +324,7 @@ export default function TokenomicsPage() {
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Public Sale</span>
+                          <span className="text-sm font-medium">Community Rewards</span>
                           <span className="text-sm text-muted-foreground">
                             {formatPercentage(tokenStats.distribution.publicSale, tokenStats.totalSupply)}%
                           </span>
@@ -366,7 +374,7 @@ export default function TokenomicsPage() {
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Marketing</span>
+                          <span className="text-sm font-medium">Airdrop</span>
                           <span className="text-sm text-muted-foreground">
                             {formatPercentage(tokenStats.distribution.marketing, tokenStats.totalSupply)}%
                           </span>
@@ -398,7 +406,7 @@ export default function TokenomicsPage() {
 
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Reserve Fund</span>
+                          <span className="text-sm font-medium">Game Treasury</span>
                           <span className="text-sm text-muted-foreground">
                             {formatPercentage(tokenStats.distribution.reserve, tokenStats.totalSupply)}%
                           </span>

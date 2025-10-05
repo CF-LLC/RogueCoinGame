@@ -35,7 +35,7 @@ module.exports = {
       gasPrice: 20000000000, // 20 gwei
     },
     polygon: {
-      url: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
+      url: process.env.POLYGON_RPC_URL || "https://polygon-mainnet.g.alchemy.com/v2/nBAwpGnF4mqnMRtGxC4Pi",
       accounts: getAccounts(),
       chainId: 137,
       gasPrice: 60000000000, // 60 gwei - higher than current network

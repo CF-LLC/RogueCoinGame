@@ -12,6 +12,7 @@ export interface DetectedWallet {
   icon: string
   installed: boolean
   provider?: any
+  deepLink?: string
 }
 
 interface Web3ContextType {
@@ -112,7 +113,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           type: 'metamask',
           icon: '🦊',
           installed: !!metamaskProvider,
-          provider: metamaskProvider
+          provider: metamaskProvider,
+          deepLink: 'https://metamask.app.link/dapp/' + window.location.host + window.location.pathname
         })
         
         // Phantom
@@ -122,7 +124,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           type: 'phantom',
           icon: '👻',
           installed: !!phantomProvider,
-          provider: phantomProvider
+          provider: phantomProvider,
+          deepLink: 'https://phantom.app/ul/browse/' + window.location.host + window.location.pathname
         })
         
         // Coinbase
@@ -132,7 +135,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           type: 'coinbase',
           icon: '🔵',
           installed: !!coinbaseProvider,
-          provider: coinbaseProvider
+          provider: coinbaseProvider,
+          deepLink: 'https://go.cb-w.com/dapp?cb_url=' + encodeURIComponent(window.location.href)
         })
         
         // Trust
@@ -142,7 +146,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           type: 'trust',
           icon: '🛡️',
           installed: !!trustProvider,
-          provider: trustProvider
+          provider: trustProvider,
+          deepLink: 'https://link.trustwallet.com/open_url?coin_id=60&url=' + encodeURIComponent(window.location.href)
         })
       } else if (window.ethereum) {
         console.log('=== Single Provider Detected ===')
@@ -176,7 +181,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           type: 'metamask',
           icon: '🦊',
           installed: isMetaMask,
-          provider: isMetaMask ? window.ethereum : undefined
+          provider: isMetaMask ? window.ethereum : undefined,
+          deepLink: 'https://metamask.app.link/dapp/' + window.location.host + window.location.pathname
         })
         
         wallets.push({
@@ -184,7 +190,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           type: 'phantom',
           icon: '👻',
           installed: isPhantom,
-          provider: isPhantom ? window.ethereum : undefined
+          provider: isPhantom ? window.ethereum : undefined,
+          deepLink: 'https://phantom.app/ul/browse/' + window.location.host + window.location.pathname
         })
         
         wallets.push({
@@ -192,7 +199,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           type: 'coinbase',
           icon: '🔵',
           installed: isCoinbase,
-          provider: isCoinbase ? window.ethereum : undefined
+          provider: isCoinbase ? window.ethereum : undefined,
+          deepLink: 'https://go.cb-w.com/dapp?cb_url=' + encodeURIComponent(window.location.href)
         })
         
         wallets.push({
@@ -200,39 +208,44 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           type: 'trust',
           icon: '🛡️',
           installed: isTrust,
-          provider: isTrust ? window.ethereum : undefined
+          provider: isTrust ? window.ethereum : undefined,
+          deepLink: 'https://link.trustwallet.com/open_url?coin_id=60&url=' + encodeURIComponent(window.location.href)
         })
       } else {
         console.log('=== No Ethereum Provider ===')
-        // No ethereum provider
+        // No ethereum provider - add deep links for mobile wallets
         wallets.push(
           {
             name: 'MetaMask',
             type: 'metamask',
             icon: '🦊',
             installed: false,
-            provider: undefined
+            provider: undefined,
+            deepLink: 'https://metamask.app.link/dapp/' + window.location.host + window.location.pathname
           },
           {
             name: 'Phantom',
             type: 'phantom',
             icon: '👻',
             installed: false,
-            provider: undefined
+            provider: undefined,
+            deepLink: 'https://phantom.app/ul/browse/' + window.location.host + window.location.pathname
           },
           {
             name: 'Coinbase Wallet',
             type: 'coinbase',
             icon: '🔵',
             installed: false,
-            provider: undefined
+            provider: undefined,
+            deepLink: 'https://go.cb-w.com/dapp?cb_url=' + encodeURIComponent(window.location.href)
           },
           {
             name: 'Trust Wallet',
             type: 'trust',
             icon: '🛡️',
             installed: false,
-            provider: undefined
+            provider: undefined,
+            deepLink: 'https://link.trustwallet.com/open_url?coin_id=60&url=' + encodeURIComponent(window.location.href)
           }
         )
       }
@@ -363,6 +376,13 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           
           if (!walletProvider) {
             console.error('MetaMask provider not found')
+            // Check if we're on mobile and try deep link
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            if (isMobile) {
+              const deepLink = 'https://metamask.app.link/dapp/' + window.location.host + window.location.pathname
+              window.open(deepLink, '_blank')
+              throw new Error("Opening MetaMask app... If MetaMask doesn't open, please install it from your app store.")
+            }
             throw new Error("MetaMask not installed or not detected. Please install MetaMask browser extension.")
           }
           break
@@ -375,6 +395,12 @@ export function Web3Provider({ children }: { children: ReactNode }) {
             walletProvider = window.ethereum
           }
           if (!walletProvider) {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            if (isMobile) {
+              const deepLink = 'https://phantom.app/ul/browse/' + window.location.host + window.location.pathname
+              window.open(deepLink, '_blank')
+              throw new Error("Opening Phantom app... If Phantom doesn't open, please install it from your app store.")
+            }
             throw new Error("Phantom wallet not installed or Ethereum mode not enabled")
           }
           break
@@ -386,6 +412,12 @@ export function Web3Provider({ children }: { children: ReactNode }) {
             walletProvider = window.ethereum
           }
           if (!walletProvider) {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            if (isMobile) {
+              const deepLink = 'https://go.cb-w.com/dapp?cb_url=' + encodeURIComponent(window.location.href)
+              window.open(deepLink, '_blank')
+              throw new Error("Opening Coinbase Wallet app... If Coinbase Wallet doesn't open, please install it from your app store.")
+            }
             throw new Error("Coinbase Wallet not installed")
           }
           break
@@ -397,6 +429,12 @@ export function Web3Provider({ children }: { children: ReactNode }) {
             walletProvider = window.ethereum
           }
           if (!walletProvider) {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            if (isMobile) {
+              const deepLink = 'https://link.trustwallet.com/open_url?coin_id=60&url=' + encodeURIComponent(window.location.href)
+              window.open(deepLink, '_blank')
+              throw new Error("Opening Trust Wallet app... If Trust Wallet doesn't open, please install it from your app store.")
+            }
             throw new Error("Trust Wallet not installed")
           }
           break
@@ -556,7 +594,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
             symbol: 'POL',
             decimals: 18,
           },
-          rpcUrls: ['https://polygon-rpc.com/'],
+          rpcUrls: ['https://polygon-mainnet.g.alchemy.com/v2/nBAwpGnF4mqnMRtGxC4Pi'],
           blockExplorerUrls: ['https://polygonscan.com/'],
         }],
       })

@@ -5,7 +5,7 @@ async function verifyContracts() {
   console.log("🔍 Verifying contract deployment on Polygon mainnet...\n")
   
   // Connect to Polygon mainnet
-  const provider = new ethers.JsonRpcProvider("https://polygon-rpc.com")
+  const provider = new ethers.JsonRpcProvider("https://polygon-mainnet.g.alchemy.com/v2/nBAwpGnF4mqnMRtGxC4Pi")
   
   const contracts = {
     "RGC Token": "0x0708a9DD95F191711221D5D0BC8B12B2C5b7bC5e",

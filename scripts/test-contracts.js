@@ -32,7 +32,7 @@ const CRASH_GAME_ABI = [
 async function testContracts() {
   console.log('🔍 Testing RogueCoin Contracts on Polygon Mainnet...\n')
   
-  const provider = new ethers.JsonRpcProvider('https://polygon-rpc.com')
+  const provider = new ethers.JsonRpcProvider('https://polygon-mainnet.g.alchemy.com/v2/nBAwpGnF4mqnMRtGxC4Pi')
   
   try {
     // Test RGC Token

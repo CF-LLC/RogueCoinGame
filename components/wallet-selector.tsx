@@ -44,6 +44,7 @@ export default function WalletSelector({
 
   const installedWallets = availableWallets.filter(w => w.installed)
   const hasInstalledWallets = installedWallets.length > 0
+  const isMobile = typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 
   if (variant === "dropdown") {
     return (
@@ -82,13 +83,61 @@ export default function WalletSelector({
                   </div>
                 </DropdownMenuItem>
               ))}
+              
+              {/* Show non-installed wallets on mobile */}
+              {isMobile && availableWallets.filter(w => !w.installed).map((wallet) => (
+                <DropdownMenuItem
+                  key={`mobile-${wallet.type}`}
+                  onClick={() => handleWalletConnect(wallet.type)}
+                  disabled={isConnecting}
+                  className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{wallet.icon}</span>
+                    <div>
+                      <div className="font-medium">{wallet.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Open mobile app
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-primary font-medium">
+                    {isConnecting ? "Opening..." : "Open App"}
+                  </div>
+                </DropdownMenuItem>
+              ))}
             </div>
           ) : (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              <p className="mb-2">No compatible wallets detected</p>
+              <p className="mb-2">{isMobile ? "Open your wallet app" : "No compatible wallets detected"}</p>
               <p className="text-xs">
-                Please install MetaMask, Phantom, Coinbase Wallet, or Trust Wallet
+                {isMobile 
+                  ? "Tap a wallet below to open the mobile app"
+                  : "Please install MetaMask, Phantom, Coinbase Wallet, or Trust Wallet"
+                }
               </p>
+              
+              {/* Show all wallets on mobile even when not "installed" */}
+              {isMobile && (
+                <div className="mt-3 space-y-1">
+                  {availableWallets.map((wallet) => (
+                    <DropdownMenuItem
+                      key={`fallback-${wallet.type}`}
+                      onClick={() => handleWalletConnect(wallet.type)}
+                      disabled={isConnecting}
+                      className="flex items-center justify-between p-2 cursor-pointer hover:bg-muted/50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{wallet.icon}</span>
+                        <span className="text-sm font-medium">{wallet.name}</span>
+                      </div>
+                      <div className="text-xs text-primary font-medium">
+                        Open App
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </DropdownMenuContent>
@@ -102,7 +151,10 @@ export default function WalletSelector({
       <CardHeader>
         <CardTitle className="text-center">Choose Your Wallet</CardTitle>
         <CardDescription className="text-center">
-          Connect to Polygon network with your preferred wallet
+          {isMobile 
+            ? "Connect with your mobile wallet app or browser extension"
+            : "Connect to Polygon network with your preferred wallet"
+          }
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -127,7 +179,25 @@ export default function WalletSelector({
                   {isConnecting ? "Connecting..." : "Connect"}
                 </Button>
               ) : (
-                <Badge variant="secondary">Not Installed</Badge>
+                <div className="flex flex-col items-end gap-1">
+                  {isMobile ? (
+                    <Button
+                      onClick={() => handleWalletConnect(wallet.type)}
+                      disabled={isConnecting}
+                      size="sm"
+                      variant="outline"
+                    >
+                      Open App
+                    </Button>
+                  ) : (
+                    <Badge variant="secondary">Not Installed</Badge>
+                  )}
+                  {isMobile && (
+                    <span className="text-xs text-muted-foreground">
+                      Opens mobile app
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           </div>
