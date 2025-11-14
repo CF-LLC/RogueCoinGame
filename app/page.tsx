@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Rocket, TrendingUp, AlertCircle } from "lucide-react"
+import { Loader2, Rocket, TrendingUp, AlertCircle, CheckCircle } from "lucide-react"
 import { ethers } from "ethers"
-import { CONTRACTS, CRASH_GAME_ABI, RGC_TOKEN_ABI } from "@/lib/contracts"
+import { CONTRACTS, RGC_TOKEN_ABI } from "@/lib/contracts"
+import { GameManager, generateCrashPoint } from "@/lib/game-manager"
 import { RocketAnimation } from "@/components/rocket-animation"
 import { GameHistory } from "@/components/game-history"
 import { WelcomeScreen } from "@/components/welcome-screen"
@@ -27,15 +28,21 @@ export default function GamePage() {
   const [currentRoundId, setCurrentRoundId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [txHash, setTxHash] = useState<string | null>(null)
   const [minBet, setMinBet] = useState("0")
   const [maxBet, setMaxBet] = useState("0")
   const [winnings, setWinnings] = useState<string | null>(null)
+  const [gameManager, setGameManager] = useState<GameManager | null>(null)
+  const [crashRevealed, setCrashRevealed] = useState(false)
   const animationRef = useRef<number | null>(null)
+  const gameStartTime = useRef<number | null>(null)
 
   useEffect(() => {
     if (signer) {
-      loadGameData()
+      const manager = new GameManager(signer)
+      setGameManager(manager)
+      loadGameData(manager)
     }
   }, [signer])
 
@@ -49,55 +56,63 @@ export default function GamePage() {
     return () => stopMultiplierAnimation()
   }, [gameState])
 
-  const loadGameData = async () => {
-    if (!signer) return
-
-    // Check if contracts are configured
-    if (!CONTRACTS.CRASH_GAME || CONTRACTS.CRASH_GAME === "0x0000000000000000000000000000000000000000") {
-      console.warn("Crash game contract not configured")
+  const loadGameData = async (manager?: GameManager) => {
+    const gameManagerToUse = manager || gameManager
+    if (!gameManagerToUse) {
       setMinBet("0.001") // Default values for UI
       setMaxBet("10")
       return
     }
 
     try {
-      const gameContract = new ethers.Contract(CONTRACTS.CRASH_GAME, CRASH_GAME_ABI, signer)
-      
-      // Test contract connectivity first
-      try {
-        const min = await gameContract.minBet()
-        const max = await gameContract.maxBet()
-        setMinBet(ethers.formatEther(min))
-        setMaxBet(ethers.formatEther(max))
-      } catch (contractError: any) {
-        console.warn("Contract not accessible:", contractError.message)
-        // Set sensible defaults if contract isn't available
+      const limits = await gameManagerToUse.getBetLimits()
+      if (limits) {
+        setMinBet(limits.min)
+        setMaxBet(limits.max)
+      } else {
         setMinBet("0.001")
         setMaxBet("10")
-        // Don't show error to user for this, just log it
       }
     } catch (err) {
       console.error("Error loading game data:", err)
-      // Set defaults for UI functionality
       setMinBet("0.001")
       setMaxBet("10")
     }
   }
 
   const startMultiplierAnimation = () => {
-    const startTime = Date.now()
+    gameStartTime.current = Date.now()
+    setCrashRevealed(false)
+    
     const animate = () => {
-      const elapsed = Date.now() - startTime
-      const multiplier = 1.0 + elapsed / 1000
-      setCurrentMultiplier(multiplier)
+      if (!gameStartTime.current) return
+      
+      const elapsed = Date.now() - gameStartTime.current
+      const newMultiplier = 1.0 + elapsed / 2000 // Slower animation: 1x per 2 seconds
+      setCurrentMultiplier(newMultiplier)
 
-      if (crashPoint && multiplier >= crashPoint) {
+      // Check if we have a crash point and reached it
+      if (crashPoint && newMultiplier >= crashPoint && !crashRevealed) {
+        setCrashRevealed(true)
         setGameState("crashed")
         setCurrentMultiplier(crashPoint)
         stopMultiplierAnimation()
-      } else {
-        animationRef.current = requestAnimationFrame(animate)
+        
+        // Auto-settle loss after a short delay
+        setTimeout(() => {
+          if (currentRoundId && gameManager) {
+            gameManager.getRound(currentRoundId).then(round => {
+              if (round && !round.settled && round.cashOutMultiplier === 0) {
+                setError("Round settled as loss - rocket crashed!")
+              }
+            }).catch(console.error)
+          }
+        }, 2000)
+        
+        return
       }
+
+      animationRef.current = requestAnimationFrame(animate)
     }
     animationRef.current = requestAnimationFrame(animate)
   }
@@ -107,11 +122,12 @@ export default function GamePage() {
       cancelAnimationFrame(animationRef.current)
       animationRef.current = null
     }
+    gameStartTime.current = null
   }
 
   const handlePlaceBet = async () => {
-    if (!signer || !account) {
-      setError("Please connect your wallet")
+    if (!gameManager || !account) {
+      setError("Game not available - please ensure wallet is connected")
       return
     }
 
@@ -126,137 +142,62 @@ export default function GamePage() {
       return
     }
 
-    // Check if contracts are configured
-    if (!CONTRACTS.CRASH_GAME || !CONTRACTS.RGC_TOKEN) {
-      setError("Game contracts not configured. Please check deployment.")
+    if (amount > Number.parseFloat(rgcBalance)) {
+      setError("Insufficient RGC balance")
       return
     }
 
     setLoading(true)
     setError(null)
+    setSuccess(null)
     setTxHash(null)
     setWinnings(null)
+    setGameState("betting")
 
     try {
-      const gameContract = new ethers.Contract(CONTRACTS.CRASH_GAME, CRASH_GAME_ABI, signer)
-      const tokenContract = new ethers.Contract(CONTRACTS.RGC_TOKEN, RGC_TOKEN_ABI, signer)
-
+      // Check and approve tokens if needed
+      const tokenContract = new ethers.Contract(CONTRACTS.RGC_TOKEN, RGC_TOKEN_ABI, signer!)
       const betAmountWei = ethers.parseEther(betAmount)
-
-      // Check token balance first
-      const balance = await tokenContract.balanceOf(account)
-      if (balance < betAmountWei) {
-        setError("Insufficient RGC balance")
-        return
-      }
-
-      // Check if contracts are valid by testing a simple call
-      try {
-        const [minBetCheck, maxBetCheck, houseEdge] = await Promise.all([
-          gameContract.minBet(),
-          gameContract.maxBet(), 
-          gameContract.houseEdge()
-        ])
-        console.log('Game contract status:', {
-          minBet: ethers.formatEther(minBetCheck),
-          maxBet: ethers.formatEther(maxBetCheck),
-          houseEdge: Number(houseEdge) / 100 + '%'
-        })
-      } catch (contractError) {
-        console.error('Game contract check failed:', contractError)
-        setError("Game contract not available. Please check if contracts are deployed.")
-        return
-      }
-
+      
       // Check allowance
       const allowance = await tokenContract.allowance(account, CONTRACTS.CRASH_GAME)
       if (allowance < betAmountWei) {
-        try {
-          // Approve tokens
-          const approveTx = await tokenContract.approve(CONTRACTS.CRASH_GAME, betAmountWei)
-          await approveTx.wait()
-        } catch (approveError: any) {
-          setError("Failed to approve tokens: " + (approveError.message || "Unknown error"))
-          return
-        }
+        setSuccess("Approving RGC tokens...")
+        const approveTx = await tokenContract.approve(CONTRACTS.CRASH_GAME, betAmountWei)
+        await approveTx.wait()
+        setSuccess("Tokens approved! Placing bet...")
       }
 
       // Generate client seed
       const clientSeed = Math.floor(Math.random() * 1000000)
 
-      // Place bet
-      console.log('Placing bet:', {
-        amount: ethers.formatEther(betAmountWei) + ' RGC',
-        clientSeed,
-        balance: ethers.formatEther(balance) + ' RGC',
-        allowance: ethers.formatEther(allowance) + ' RGC'
-      })
+      // Place bet using game manager
+      const result = await gameManager.placeBet(betAmount, clientSeed)
       
-      // Try to estimate gas first to catch errors early
-      try {
-        const gasEstimate = await gameContract.placeBet.estimateGas(betAmountWei, clientSeed)
-        console.log('Gas estimate successful:', gasEstimate.toString())
-      } catch (gasError: any) {
-        console.error('Gas estimation failed:', gasError)
-        if (gasError.message.includes('missing revert data')) {
-          setError('🚫 Bet rejected by contract. Possible causes:\n• Bet amount below minimum (check if min bet is higher than expected)\n• Bet amount above maximum\n• Insufficient RGC balance\n• Game contract paused\n• Network issues')
-        } else if (gasError.reason) {
-          setError('Contract error: ' + gasError.reason)
-        } else {
-          setError('Transaction will fail: ' + (gasError.message || 'Unknown error'))
-        }
+      if (!result.success) {
+        setError(result.error || "Failed to place bet")
+        setGameState("idle")
         return
       }
-      
-      const tx = await gameContract.placeBet(betAmountWei, clientSeed)
-      setTxHash(tx.hash)
 
-      const receipt = await tx.wait()
-
-      // Get round ID from event
-      const betPlacedEvent = receipt.logs.find((log: any) => {
-        try {
-          const parsed = gameContract.interface.parseLog(log)
-          return parsed?.name === "BetPlaced"
-        } catch {
-          return false
-        }
-      })
-
-      if (betPlacedEvent) {
-        const parsed = gameContract.interface.parseLog(betPlacedEvent)
-        const roundId = parsed?.args[0]
-        setCurrentRoundId(Number(roundId))
-      }
+      setCurrentRoundId(result.roundId!)
+      setTxHash(result.txHash!)
+      setSuccess("🚀 Bet placed! Rocket launching...")
 
       await refreshBalances()
 
-      // Simulate game start
+      // Generate crash point for client-side simulation
+      const serverSeed = Math.floor(Math.random() * 1000000000) // This would come from server in production
+      const simulatedCrashPoint = generateCrashPoint(clientSeed, serverSeed)
+      setCrashPoint(simulatedCrashPoint)
+
+      // Start game
       setGameState("playing")
       setCurrentMultiplier(1.0)
 
-      // Simulate crash point (in production, this comes from backend)
-      const simulatedCrash = 1.5 + Math.random() * 8.5 // 1.5x to 10x
-      setCrashPoint(simulatedCrash)
     } catch (err: any) {
       console.error("Bet error:", err)
-      if (err.code === "ACTION_REJECTED") {
-        setError("Transaction rejected by user")
-      } else if (err.code === "CALL_EXCEPTION") {
-        if (err.message.includes("missing revert data")) {
-          setError("Transaction failed. This may be due to: insufficient RGC balance, insufficient allowance, or the game contract being paused. Please check your RGC balance and try again.")
-        } else {
-          setError("Contract call failed. The game may not be available or contracts not deployed.")
-        }
-      } else if (err.message.includes("Insufficient balance")) {
-        setError("Insufficient RGC balance")
-      } else if (err.message.includes("User denied")) {
-        setError("Transaction rejected by user")
-      } else if (err.message.includes("missing revert data")) {
-        setError("Transaction failed without specific error. Common causes: insufficient RGC tokens, tokens not approved, or bet amount outside limits.")
-      } else {
-        setError(err.message || "Failed to place bet")
-      }
+      setError(err.message || "Failed to place bet")
       setGameState("idle")
     } finally {
       setLoading(false)
@@ -264,39 +205,42 @@ export default function GamePage() {
   }
 
   const handleCashOut = async () => {
-    if (!signer || currentRoundId === null) {
+    if (!gameManager || currentRoundId === null) {
       setError("No active round to cash out")
       return
     }
 
     setLoading(true)
     setError(null)
+    setSuccess(null)
 
     try {
-      const gameContract = new ethers.Contract(CONTRACTS.CRASH_GAME, CRASH_GAME_ABI, signer)
-
-      // Cash out at current multiplier
+      // Cash out at current multiplier (convert to integer format expected by contract)
       const multiplierInt = Math.floor(currentMultiplier * 100)
-      const tx = await gameContract.cashOut(currentRoundId, multiplierInt)
-      await tx.wait()
+      const result = await gameManager.cashOut(currentRoundId, multiplierInt)
+      
+      if (!result.success) {
+        setError(result.error || "Failed to cash out")
+        
+        // If the error is about crashing, update game state
+        if (result.error?.includes("crashed") || result.error?.includes("Too late")) {
+          setGameState("crashed")
+        }
+        return
+      }
 
-      // Calculate winnings
-      const betAmountNum = Number.parseFloat(betAmount)
-      const winningsAmount = betAmountNum * currentMultiplier
-      setWinnings(winningsAmount.toFixed(2))
-
+      // Success!
+      setWinnings(result.winnings!)
+      setSuccess(`🎉 Cashed out at ${currentMultiplier.toFixed(2)}x! Won ${result.winnings} RGC`)
+      setTxHash(result.txHash!)
+      
       await refreshBalances()
 
       setGameState("won")
       stopMultiplierAnimation()
     } catch (err: any) {
       console.error("Cash out error:", err)
-      if (err.message.includes("Multiplier too high")) {
-        setError("Too late! The rocket crashed.")
-        setGameState("crashed")
-      } else {
-        setError(err.message || "Failed to cash out")
-      }
+      setError(err.message || "Failed to cash out")
     } finally {
       setLoading(false)
     }
@@ -308,9 +252,11 @@ export default function GamePage() {
     setCrashPoint(null)
     setCurrentRoundId(null)
     setError(null)
+    setSuccess(null)
     setTxHash(null)
     setWinnings(null)
-    // Keep demo mode state
+    setCrashRevealed(false)
+    stopMultiplierAnimation()
   }
 
   return (
@@ -457,6 +403,14 @@ export default function GamePage() {
                           </Button>
                         </div>
                       </div>
+
+                      {/* Success Display */}
+                      {success && (
+                        <Alert className="border-green-500/50 bg-green-500/10">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <AlertDescription className="text-green-700">{success}</AlertDescription>
+                        </Alert>
+                      )}
 
                       {/* Error Display */}
                       {error && (

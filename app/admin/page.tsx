@@ -12,6 +12,7 @@ import { Loader2, AlertCircle, CheckCircle2, Settings, DollarSign, TrendingUp } 
 import { ethers } from "ethers"
 import { CONTRACTS, AIRDROP_ABI, CRASH_GAME_ABI, ADMIN_WALLET } from "@/lib/contracts"
 import { WelcomeScreen } from "@/components/welcome-screen"
+import { DirectTradingEnabler } from "@/components/direct-trading-enabler"
 
 export default function AdminPage() {
   const { account, signer } = useWeb3()
@@ -275,6 +276,7 @@ export default function AdminPage() {
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="trading">Trading</TabsTrigger>
             <TabsTrigger value="airdrop">Airdrop</TabsTrigger>
             <TabsTrigger value="game">Game</TabsTrigger>
           </TabsList>
@@ -349,6 +351,21 @@ export default function AdminPage() {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </TabsContent>
+
+          {/* Trading Tab */}
+          <TabsContent value="trading" className="space-y-6">
+            <Alert className="bg-yellow-50 border-yellow-200">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800">
+                <strong>Important:</strong> Trading must be enabled before users can claim airdrops or trade tokens.
+                This is a one-time, irreversible action that allows RGC to be traded on DEXs.
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex justify-center">
+              <DirectTradingEnabler />
             </div>
           </TabsContent>
 

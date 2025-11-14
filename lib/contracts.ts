@@ -36,13 +36,20 @@ export const RGC_TOKEN_ABI = [
 export const AIRDROP_ABI = [
   "function claimAirdrop() payable",
   "function hasClaimed(address user) view returns (bool)",
+  "function hasClaimedAirdrop(address user) view returns (bool)",
   "function airdropAmount() view returns (uint256)",
   "function claimFee() view returns (uint256)",
+  "function totalClaimed() view returns (uint256)",
+  "function totalFeeCollected() view returns (uint256)",
+  "function paused() view returns (bool)",
+  "function owner() view returns (address)",
   "function getStats() view returns (uint256, uint256, uint256, uint256, uint256)",
   "function setAirdropAmount(uint256 amount)",
   "function setClaimFee(uint256 fee)",
   "function withdrawETH()",
   "function withdrawTokens(uint256 amount)",
+  "function pause()",
+  "function unpause()",
   "event AirdropClaimed(address indexed user, uint256 amount, uint256 fee)",
 ]
 

@@ -12,6 +12,7 @@ import { ExternalLink, Coins, TrendingUp, Users, Zap, Shield, Globe, Copy, Check
 import { ethers } from "ethers"
 import { CONTRACTS, RGC_TOKEN_ABI } from "@/lib/contracts"
 import ContractStatus from "@/components/contract-status"
+import { DirectTradingEnabler } from "@/components/direct-trading-enabler"
 import Image from "next/image"
 
 interface TokenStats {
@@ -229,24 +230,27 @@ export default function TokenomicsPage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="pb-2 sm:pb-3">
-                  <CardDescription className="flex items-center gap-2 text-xs sm:text-sm">
-                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                    Trading Status
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={tokenStats?.tradingEnabled ? "default" : "secondary"} className="text-xs sm:text-sm">
-                      {tokenStats ? (tokenStats.tradingEnabled ? "Enabled" : "Disabled") : "Loading..."}
-                    </Badge>
-                  </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">Live on Polygon</p>
-                </CardContent>
-              </Card>
-
-              <Card className="sm:col-span-2 lg:col-span-1">
+            <Card>
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardDescription className="flex items-center gap-2 text-xs sm:text-sm">
+                  <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                  Trading Status
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <Badge variant={tokenStats?.tradingEnabled ? "default" : "secondary"} className="text-xs sm:text-sm">
+                    {tokenStats ? (tokenStats.tradingEnabled ? "Enabled" : "Disabled") : "Loading..."}
+                  </Badge>
+                  {!tokenStats?.tradingEnabled && account && account.toLowerCase() === "0x8da112fca23e31785e9c69ca92c8f00e999bebf2" && (
+                    <Button size="sm" variant="outline" asChild>
+                      <a href="#enable-trading">Enable</a>
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Live on Polygon</p>
+              </CardContent>
+            </Card>              <Card className="sm:col-span-2 lg:col-span-1">
                 <CardHeader className="pb-2 sm:pb-3">
                   <CardDescription className="flex items-center gap-2 text-xs sm:text-sm">
                     <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -672,6 +676,13 @@ export default function TokenomicsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Trading Enabler for Admin */}
+        {account && account.toLowerCase() === "0x8da112fca23e31785e9c69ca92c8f00e999bebf2" && !tokenStats?.tradingEnabled && (
+          <div id="enable-trading" className="flex justify-center">
+            <DirectTradingEnabler />
+          </div>
+        )}
       </div>
     </div>
   )
