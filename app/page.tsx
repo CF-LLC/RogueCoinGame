@@ -269,6 +269,24 @@ export default function GamePage() {
         <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 lg:py-8">
           <ContractStatus />
           
+          {/* Mobile Layout: How to Play at the top */}
+          <div className="lg:hidden mb-4">
+            <Card className="bg-muted/30">
+              <CardHeader>
+                <CardTitle className="text-base sm:text-lg">How to Play</CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs sm:text-sm text-muted-foreground space-y-2">
+                <ol className="list-decimal list-inside space-y-1">
+                  <li>Enter your bet amount in RGC</li>
+                  <li>Click "Place Bet" and approve the transaction</li>
+                  <li>Watch the multiplier rise</li>
+                  <li>Click "Cash Out" before the rocket crashes</li>
+                  <li>Win your bet × the multiplier!</li>
+                </ol>
+              </CardContent>
+            </Card>
+          </div>
+          
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Main Game Area */}
             <div className="lg:col-span-2 space-y-4 sm:space-y-6">
@@ -318,8 +336,10 @@ export default function GamePage() {
                 </CardContent>
               </Card>
 
-              {/* Game History */}
-              <GameHistory />
+              {/* Game History - Hidden on mobile, shown on desktop */}
+              <div className="hidden lg:block">
+                <GameHistory />
+              </div>
             </div>
 
             {/* Betting Panel */}
@@ -496,22 +516,29 @@ export default function GamePage() {
                 </CardContent>
               </Card>
 
-              {/* How to Play */}
-              <Card className="bg-muted/30">
-                <CardHeader>
-                  <CardTitle className="text-base sm:text-lg">How to Play</CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs sm:text-sm text-muted-foreground space-y-2">
-                  <ol className="list-decimal list-inside space-y-1">
-                    <li>Enter your bet amount in RGC</li>
-                    <li>Click "Place Bet" and approve the transaction</li>
-                    <li>Watch the multiplier rise</li>
-                    <li>Click "Cash Out" before the rocket crashes</li>
-                    <li>Win your bet × the multiplier!</li>
-                  </ol>
-                </CardContent>
-              </Card>
+              {/* How to Play - Desktop only */}
+              <div className="hidden lg:block">
+                <Card className="bg-muted/30">
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">How to Play</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-xs sm:text-sm text-muted-foreground space-y-2">
+                    <ol className="list-decimal list-inside space-y-1">
+                      <li>Enter your bet amount in RGC</li>
+                      <li>Click "Place Bet" and approve the transaction</li>
+                      <li>Watch the multiplier rise</li>
+                      <li>Click "Cash Out" before the rocket crashes</li>
+                      <li>Win your bet × the multiplier!</li>
+                    </ol>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
+          </div>
+          
+          {/* Mobile Layout: Game History at the bottom */}
+          <div className="lg:hidden mt-4">
+            <GameHistory />
           </div>
         </div>
       )}
