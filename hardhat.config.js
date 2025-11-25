@@ -1,11 +1,13 @@
 require("@nomicfoundation/hardhat-toolbox")
 require("dotenv").config()
+require("dotenv").config({ path: '.env.local' })
 
 // Function to get accounts 
 function getAccounts() {
   const privateKey = process.env.PRIVATE_KEY
   if (!privateKey) {
-    throw new Error("PRIVATE_KEY not set in .env file")
+    console.warn("⚠️  PRIVATE_KEY not set - using default hardhat account")
+    return []
   }
   
   // Remove 'v0x' prefix if present and ensure '0x' prefix

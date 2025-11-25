@@ -319,6 +319,9 @@ export default function AdminPage() {
                     <TrendingUp className="h-5 w-5 text-secondary" />
                     Game Stats
                   </CardTitle>
+                  <CardDescription className="text-xs text-green-600 mt-1">
+                    ✅ Auto-reveal enabled - games settle fully on-chain
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex justify-between">

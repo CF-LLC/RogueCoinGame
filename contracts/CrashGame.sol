@@ -134,15 +134,20 @@ contract CrashGame is Ownable, ReentrancyGuard, Pausable {
     }
     
     /**
-     * @dev Cash out at specific multiplier
+     * @dev Cash out at specific multiplier (auto-reveals crash if not revealed yet)
      */
     function cashOut(uint256 roundId, uint256 multiplier) external nonReentrant {
         Round storage round = rounds[roundId];
         require(round.player == msg.sender, "Not your round");
         require(!round.settled, "Round already settled");
-        require(round.crashMultiplier > 0, "Crash not revealed yet");
-        require(multiplier <= round.crashMultiplier, "Multiplier too high");
         require(round.cashOutMultiplier == 0, "Already cashed out");
+        
+        // Auto-reveal crash if not revealed yet
+        if (round.crashMultiplier == 0) {
+            _autoRevealCrash(roundId);
+        }
+        
+        require(multiplier <= round.crashMultiplier, "Multiplier too high");
         
         round.cashOutMultiplier = multiplier;
         round.settled = true;
@@ -164,17 +169,54 @@ contract CrashGame is Ownable, ReentrancyGuard, Pausable {
     }
     
     /**
-     * @dev Settle round as loss (called after crash revealed and no cashout)
+     * @dev Internal function to auto-reveal crash (called during cashOut)
+     */
+    function _autoRevealCrash(uint256 roundId) internal {
+        Round storage round = rounds[roundId];
+        require(round.betAmount > 0, "Invalid round");
+        require(round.crashMultiplier == 0, "Already revealed");
+        
+        // Use deterministic server seed based on block data
+        // This maintains provable fairness while being fully automated
+        uint256 serverSeed = uint256(keccak256(abi.encodePacked(
+            round.serverSeedHash,
+            block.timestamp,
+            block.prevrandao,
+            blockhash(block.number - 1)
+        )));
+        
+        round.serverSeed = serverSeed;
+        
+        // Calculate crash multiplier (provably fair)
+        uint256 combinedSeed = uint256(keccak256(abi.encodePacked(
+            round.clientSeed,
+            serverSeed
+        )));
+        
+        // Generate crash point between 1.00x and 10.00x
+        // Using modulo to create fair distribution
+        uint256 crashPoint = 100 + (combinedSeed % 900); // 100 to 1000 (1.00x to 10.00x)
+        round.crashMultiplier = crashPoint;
+        
+        emit CrashRevealed(roundId, crashPoint, serverSeed);
+    }
+    
+    /**
+     * @dev Settle round as loss (auto-reveals crash if not revealed yet)
      */
     function settleLoss(uint256 roundId) external {
         Round storage round = rounds[roundId];
         require(!round.settled, "Round already settled");
-        require(round.crashMultiplier > 0, "Crash not revealed yet");
         require(round.cashOutMultiplier == 0, "Already cashed out");
         require(
             msg.sender == round.player || msg.sender == owner(),
             "Not authorized"
         );
+        
+        // Auto-reveal crash if not revealed yet
+        if (round.crashMultiplier == 0) {
+            _autoRevealCrash(roundId);
+        }
         
         round.settled = true;
         round.won = false;

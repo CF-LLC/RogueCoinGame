@@ -100,25 +100,6 @@ export class GameManager {
       // Get round details first
       const round = await this.contract.getRound(roundId)
       
-      // Check if crash has been revealed
-      if (round.crashMultiplier === 0) {
-        return {
-          success: false,
-          error: "Crash point not revealed yet. Please wait..."
-        }
-      }
-      
-      // Check if multiplier is valid
-      const crashPoint = Number(round.crashMultiplier) / 100
-      const requestedMultiplier = multiplier / 100
-      
-      if (requestedMultiplier > crashPoint) {
-        return {
-          success: false,
-          error: `Too late! Rocket crashed at ${crashPoint.toFixed(2)}x`
-        }
-      }
-      
       // Check if already cashed out
       if (round.cashOutMultiplier > 0) {
         return {
@@ -135,24 +116,59 @@ export class GameManager {
         }
       }
       
-      // Execute cash out
+      // Execute cash out on-chain (contract will auto-reveal crash if needed)
       const multiplierInt = Math.floor(multiplier)
+      console.log(`📤 Cashing out at ${(multiplier / 100).toFixed(2)}x...`)
       const tx = await this.contract.cashOut(roundId, multiplierInt)
-      await tx.wait()
+      console.log(`⏳ Waiting for confirmation... TX: ${tx.hash}`)
+      const receipt = await tx.wait()
       
-      // Calculate winnings
+      // Parse CashOut event to get actual winnings
+      const cashOutEvent = receipt.logs
+        .map((log: any) => {
+          try {
+            return this.contract.interface.parseLog(log)
+          } catch {
+            return null
+          }
+        })
+        .find((event: any) => event?.name === "CashedOut")
+      
+      if (cashOutEvent) {
+        const winnings = ethers.formatUnits(cashOutEvent.args.winnings, 18)
+        console.log(`✅ Cashed out! Won ${winnings} RGC`)
+        
+        return {
+          success: true,
+          winnings,
+          txHash: receipt.hash
+        }
+      }
+      
+      // Fallback: calculate winnings if event not found
       const betAmount = Number(ethers.formatEther(round.betAmount))
       const grossWinnings = betAmount * (multiplier / 100)
       const houseEdge = 2 // 2%
       const netWinnings = grossWinnings * (1 - houseEdge / 100)
       
+      console.log(`✅ Cashed out! Won ${netWinnings.toFixed(6)} RGC`)
+      
       return {
         success: true,
         winnings: netWinnings.toFixed(6),
-        txHash: tx.hash
+        txHash: receipt.hash
       }
     } catch (error: any) {
       console.error("Cash out error:", error)
+      
+      // Check if error is about crash
+      if (error.message?.includes("Multiplier too high")) {
+        return {
+          success: false,
+          error: "Too late! Rocket already crashed"
+        }
+      }
+      
       return {
         success: false,
         error: this.parseError(error)

@@ -1,0 +1,20 @@
+{
+  "name": "crash-game-server",
+  "version": "1.0.0",
+  "description": "Backend server for automatically revealing crash points",
+  "main": "crash-revealer.js",
+  "scripts": {
+    "start": "node crash-revealer.js",
+    "dev": "nodemon crash-revealer.js"
+  },
+  "keywords": ["crash-game", "blockchain", "ethereum"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.13.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  }
+}

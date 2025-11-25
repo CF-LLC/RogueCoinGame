@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/cooperfeatherstone/Documents/github/RogueCoinGame/contracts/CrashGame.sol": {
-      "lastModificationDate": 1759542877104,
-      "contentHash": "4418109917c226cce1d4878d3dbb8b8a",
+      "lastModificationDate": 1764098518346,
+      "contentHash": "4b459075803e909481bcc9eee7eb447d",
       "sourceName": "contracts/CrashGame.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -469,8 +469,8 @@
       ]
     },
     "/Users/cooperfeatherstone/Documents/github/RogueCoinGame/contracts/RogueCoinAirdrop.sol": {
-      "lastModificationDate": 1759542877104,
-      "contentHash": "8642b8c240c815ba0257354ca0dbb3a8",
+      "lastModificationDate": 1763412810653,
+      "contentHash": "92c341ba4c60ca1902acc7302ddff90c",
       "sourceName": "contracts/RogueCoinAirdrop.sol",
       "solcConfig": {
         "version": "0.8.20",
