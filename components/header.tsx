@@ -15,7 +15,7 @@ export function Header() {
   const isConnected = !!account
 
   return (
-    <header className="border-b border-border bg-card/90 backdrop-blur-sm sm:sticky sm:top-0 z-50 shadow-sm">
+    <header className="border-b border-border bg-card/90 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
       {/* Connected state - full header with navigation */}
       {isConnected && (
         <div className="container mx-auto px-4 flex items-center justify-between min-h-[4rem] max-sm:flex-col max-sm:py-3 max-sm:gap-3">
