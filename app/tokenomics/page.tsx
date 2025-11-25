@@ -668,10 +668,10 @@ export default function TokenomicsPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               <Button asChild size="lg" className="text-sm sm:text-base">
-                <a href="/airdrop">Claim Airdrop</a>
+                <a href={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/airdrop`}>Claim Airdrop</a>
               </Button>
               <Button variant="outline" size="lg" asChild className="text-sm sm:text-base">
-                <a href="/">Play Game</a>
+                <a href={`${process.env.NODE_ENV === 'production' ? '/RogueCoinGame' : ''}/`}>Play Game</a>
               </Button>
             </div>
           </CardContent>
