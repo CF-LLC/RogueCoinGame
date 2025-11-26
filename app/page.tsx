@@ -336,11 +336,6 @@ export default function GamePage() {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Game History */}
-              <div>
-                <GameHistory />
-              </div>
             </div>
 
             {/* Betting Panel */}
@@ -516,11 +511,13 @@ export default function GamePage() {
                   )}
                 </CardContent>
               </Card>
-
-
             </div>
           </div>
-
+          
+          {/* Game History - Full Width at Bottom */}
+          <div className="mt-6">
+            <GameHistory />
+          </div>
         </div>
       )}
     </>
